@@ -1,0 +1,5 @@
+include MANIFEST.in README.md LICENCE.txt CONTRIBUTING.md requirements.txt .gitignore 
+include tomotok/core/VERSION
+include tutorials/*.ipynb tutorials/*.py
+recursive-include docs *.rst conf.py Makefile
+recursive-exclude *.py[cod]

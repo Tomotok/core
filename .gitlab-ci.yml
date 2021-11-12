@@ -1,0 +1,18 @@
+image: repo.tok.ipp.cas.cz:5050/tomography/tomotok/tomotok-sphinx:latest
+
+test:
+  stage: test
+  script:
+  - sphinx-build -b html docs/source public
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+
+pages:
+  stage: deploy
+  script:
+  - sphinx-build -b html docs/source public
+  artifacts:
+    paths:
+    - public
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH

@@ -1,0 +1,5 @@
+h5py == 2.10.0
+matplotlib == 3.0.3
+numpy == 1.16.5
+scipy == 1.6.0
+scikit-sparse == 0.4.4
