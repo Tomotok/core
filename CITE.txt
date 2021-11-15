@@ -1,0 +1,3 @@
+"J. Svoboda, J. Cavalier, O. Ficker, M. Imríšek, J. Mlynář and M. Hron, 
+Tomotok: python package for tomography of tokamak plasma radiation, 
+4th ECPD Conference (2021), Journal of Instrumentation"

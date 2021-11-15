@@ -34,3 +34,7 @@ Implemented auxiliary features:
 ## Graphical user interface
 
 Simple graphical user interface for visualisation and post-processing of tomography results is included in the Core package. It is based on modular system of windows. It uses main window to spawn child windows for analysis to customize displayed information based on user needs. 
+
+# Citing the Code
+
+"J. Svoboda, J. Cavalier, O.Ficker, M. Imrisek, J. Mlynar and M. Hron, *Tomotok: python package for tomography of tokamak plasma radiation*, 4th ECPD Conference (2021), Journal of Instrumentation"
