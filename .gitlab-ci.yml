@@ -1,4 +1,4 @@
-image: repo.tok.ipp.cas.cz:5050/tomography/tomotok/tomotok-sphinx:latest
+image: repo.tok.ipp.cas.cz:5050/tomography/core/tomotok-sphinx:latest
 
 test:
   stage: test
