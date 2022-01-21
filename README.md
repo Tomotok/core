@@ -2,7 +2,7 @@
 Framework for tomographic inversion of fusion plasmas focusing on inversion methods based on discretisation. Structured as a namespace package to ease implementation on different experiments and for various diagnostics.
 
 # Core
-The documentation for the Core can be found on this [link](https://tomography.pages.tok.ipp.cas.cz/tomotok).
+The documentation for the Core can be found on this [link](https://tomotok.github.io/documentation/).
 
 The Core package of Tomotok implements various discretization algorithm that are used for tomography of tokamak plasma. 
 It is required by specific packages that can create automated database access for a given fusion experimental device and ease the routine tomography computation. 
