@@ -12,7 +12,7 @@ class RegularGrid(object):
     """
     Rectangular grid of regularly spaced rectangles of same size
 
-    Describes rectangular reconstruction grid consisting of regularly spaced toroidally szmmetric nodes
+    Describes rectangular reconstruction grid consisting of regularly spaced toroidally symmetric nodes
     that have rectangular projection to reconstruction plane.
 
     Attributes
@@ -134,3 +134,34 @@ class RegularGrid(object):
         grid_points = p.contains_points(points)
         inside = grid_points.reshape(self.shape)
         return inside
+
+    def corners(self, mask=None):
+        """
+        Creates an array with r, z coordinates of node corners. 
+        
+        Corners are in clockwise order starting with top left corner.
+
+        Parameters
+        ----------
+        mask : numpy.ndarray
+            2D bool matrix for selecting nodes, shape (#z, #r)
+
+        Returns
+        -------
+        numpy.ndarray
+            corner coordinates for each node in reconstruction plane, shape (#z, #r, 4, 2)
+        """
+        corners = np.empty((*self.shape, 4, 2))
+        # top left
+        tl = np.meshgrid(self.r_border[:-1], self.z_border[1:])
+        # top rigth
+        tr = np.meshgrid(self.r_border[1:], self.z_border[1:])
+        # bottom right
+        br = np.meshgrid(self.r_border[1:], self.z_border[:-1])
+        # bottom left
+        bl = np.meshgrid(self.r_border[:-1], self.z_border[:-1])
+        
+        corners = np.stack((tl, tr, br, bl)).transpose(2, 3, 0, 1)
+        if mask is not None:
+            corners = corners[mask]
+        return corners
