@@ -4,6 +4,7 @@
 """
 Saving and loading functions for geometry matrices in sparse format using h5py module.
 """
+from typing import Tuple
 import h5py
 
 import scipy.sparse as sparse
@@ -11,7 +12,7 @@ import scipy.sparse as sparse
 from .grids import RegularGrid
 
 
-def save_sparse_gmat(floc, gmat, grid, attrs_dct=None):
+def save_sparse_gmat(floc, gmat: sparse.csr_matrix, grid: RegularGrid, attrs_dct: dict=None) -> None:
     """
     Saves geometry matrix together with description of the grid.
 
@@ -42,17 +43,15 @@ def save_sparse_gmat(floc, gmat, grid, attrs_dct=None):
         grp = f.create_group('grid')
         grp.create_dataset('nr', data=grid.nr)
         grp.create_dataset('nz', data=grid.nz)
-        #TODO add property x/ylims to grid or x/ylims attr and x/ymin/max property
-        #TODO rename x,y to r,z in grid
-        grp.create_dataset('rlims', data=(grid.rmin, grid.rmax))
-        grp.create_dataset('zlims', data=(grid.zmin, grid.zmax))
+        grp.create_dataset('rlims', data=grid.rlims)
+        grp.create_dataset('zlims', data=grid.zlims)
         grp.attrs['type'] = 'regular_rectangles'
         if attrs_dct is not None:
             for key in attrs_dct:
                 f.attrs[key] = attrs_dct[key]
 
 
-def load_gmat(floc):
+def load_sparse_gmat(floc: str) -> Tuple[sparse.csr_matrix, RegularGrid]:
     """
     Loads hdf file and creates sparse csr_matrix and RegularGrid class
 

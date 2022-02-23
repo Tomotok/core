@@ -18,7 +18,8 @@ def sparse_line_3d(rchord, vchord, grid, ychord=None, step=1e-3, rmin=None):
     """
     Computes geometry matrix using simple numerical integration algorithm.
 
-    Assumes toroidally symmetric pixels. Optiized version working with sparse matrices.
+    Assumes toroidally symmetric reconstruction nodes. 
+    Optimized version working with sparse matrices.
 
     Parameters
     ----------
@@ -48,14 +49,14 @@ def sparse_line_3d(rchord, vchord, grid, ychord=None, step=1e-3, rmin=None):
     gmat = sparse.lil_matrix((nch, grid.size))
     dr = np.diff(rchord, axis=1)
     dv = np.diff(vchord, axis=1)
-    dz = np.diff(ychord, axis=1)
-    dst = np.sqrt(dr * dr + dz * dz + dv * dv)
+    dy = np.diff(ychord, axis=1)
+    dst = np.sqrt(dr * dr + dy * dy + dv * dv)
     for i in range(nch):
         steps = int(dst[i] / step)
         x = np.linspace(rchord[i, 0], rchord[i, 1], steps)
-        h = np.linspace(ychord[i, 0], ychord[i, 1], steps)
+        y = np.linspace(ychord[i, 0], ychord[i, 1], steps)
         z = np.linspace(vchord[i, 0], vchord[i, 1], steps)
-        r = np.sqrt(x**2 + h**2)
+        r = np.sqrt(x**2 + y**2)
         if rmin is not None:
             hit = np.any(r < rmin)
             if hit:
@@ -72,7 +73,7 @@ def sparse_line_3d(rchord, vchord, grid, ychord=None, step=1e-3, rmin=None):
     return gmat.tocsr()
 
 
-def calcam_sparse_line_3d(pupil, dirs, grid, rmin=0.3, steps=10000, elong=1.):
+def calcam_sparse_line_3d(pupil, dirs, grid, steps=1e-3, rmin=None, elong=1.):
     """
     Computes geometry matrix from calcam input using sparse_line_3d algorithm.
 
@@ -86,10 +87,10 @@ def calcam_sparse_line_3d(pupil, dirs, grid, rmin=0.3, steps=10000, elong=1.):
         (#rows, #columns, 3) line of sight direction vector coordinates
     grid : tomotok.core.geometry.RegularGrid
         reconstruction grid
+    step : float, optional
+        Integration step in meters.
     rmin : float, optional
         cut lines of sight if they intersect cylinder with radius of rmin, by default 0.3
-    steps : int, optional
-        number of steps for numerical integration, by default 10000
     elong : float, optional
         multiplier for direction vectors elongation
 
