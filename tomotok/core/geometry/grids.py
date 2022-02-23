@@ -4,6 +4,8 @@
 """
 Contains class describing regularly spaced node grid
 """
+from typing import Tuple
+
 import numpy as np
 from matplotlib.path import Path
 
@@ -27,6 +29,8 @@ class RegularGrid(object):
         limits of r axis
     zmin, zmax : float
         limits of z axis
+    rlims, zlims : Tuple[float, float]
+        grid limits along respective axis
     dr, dz : float
         dimension of node in r or z axis
     r_border, z_border : numpy.ndarray
@@ -37,7 +41,7 @@ class RegularGrid(object):
         Array containing volumes of nodes (voxel) with shape (nz, nr)
     """
 
-    def __init__(self, nr, nz, rlims, zlims):
+    def __init__(self, nr: int, nz: int, rlims: Tuple[float, float], zlims: Tuple[float, float]) -> None:
         """
         Parameters
         ----------
@@ -66,7 +70,7 @@ class RegularGrid(object):
         return
 
     @property
-    def nodevol(self):
+    def nodevol(self) -> np.ndarray:
         """
         Volumes of individual nodes
 
@@ -80,11 +84,12 @@ class RegularGrid(object):
         return nodevol
 
     @property
-    def centre(self):
+    def centre(self) -> Tuple[float, float]:
+        """Returns the mean of rmin, rmax and zmin, zmax"""
         return (self.rmax + self.rmin)/2, (self.zmax + self.zmin)/2
 
     @property
-    def extent(self):
+    def extent(self) -> Tuple[float, float, float, float]:
         """
         Grid extent in format for use in matplotlib
 
@@ -96,23 +101,31 @@ class RegularGrid(object):
         return self.rmin, self.rmax, self.zmin, self.zmax
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.nr * self.nz
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[float, float]:
         return self.nz, self.nr
 
     @property
-    def center_mesh(self):
+    def center_mesh(self) -> np.ndarray:
         return np.meshgrid(self.r_center, self.z_center)
+
+    @property
+    def rlims(self) -> Tuple[float, float]:
+        return (self.rmin, self.rmax)
+
+    @property
+    def zlims(self) -> Tuple[float, float]:
+        return (self.zmin, self.zmax)
 
     def __repr__(self):
         msg = 'Node grid with resolution {}h{}'.format(self.nr, self.nz)
         msg += ' and bounds ({};{})r, ({};{})z.'.format(*self.extent)
         return msg
 
-    def is_inside(self, r, z):
+    def is_inside(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
         Determines whether node centers are inside given polygon.
 
@@ -135,7 +148,7 @@ class RegularGrid(object):
         inside = grid_points.reshape(self.shape)
         return inside
 
-    def corners(self, mask=None):
+    def corners(self, mask: np.ndarray=None) -> np.ndarray:
         """
         Creates an array with r, z coordinates of node corners. 
         
