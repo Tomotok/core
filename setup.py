@@ -19,6 +19,7 @@ setup(
     long_description_content_type='text/markdown',
     # url='',
     packages=find_packages(),
+    namespace_packages=['tomotok'],
     include_package_data=True,
     python_requires='>=3.5',
     install_requires=['numpy>=1.16', 'scipy>=1.6', 'matplotlib>=3', 'h5py>=2'],
