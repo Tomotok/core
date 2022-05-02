@@ -7,6 +7,8 @@ Structure of classes is based on algorithms proposed by T. Odstrcil however with
 T. Odstrcil et al., "Optimized tomography methods for plasma emissivity reconstruction at the
 ASDEX Upgrade tokamak," Rev. Sci. Instrum., 87(12), 123505.
 """
+from warnings import warn
+
 import numpy as np
 import scipy.sparse as sparse
 from scipy.stats.mstats import mquantiles
@@ -15,6 +17,8 @@ from scipy.sparse.linalg import eigsh
 
 class Algebraic(object):
     """
+    A base class for algebraic inversion methods using linear regularisation.
+
     Attributes
     ----------
     u : numpy.ndarray
@@ -31,19 +35,21 @@ class Algebraic(object):
         self.alpha = None
         return
 
-    def invert(self, sig, gmat, deriv, method=None, num=None):
+    def invert(self, data, gmat, regularisation, method, num=None):
         """
         Computes linear inversion using algebraic method.
         The inversion comprises of three stages:
+
             - decomposition (presolving) using only geometry and derivative matrices
             - searching for regularisation parameter
             - solving inversion using series expansion
 
         Parameters
         ----------
-        sig : numpy.ndarray
+        data : numpy.ndarray
         gmat : numpy.ndarray
-        deriv : numpy.ndarray
+        regularisation : numpy.ndarray
+            regularisation matrix
         method : str, optional
             method used for regularization parameter computation, see method find_alpha
         num : int, optional
@@ -54,28 +60,29 @@ class Algebraic(object):
         numpy.ndarray
             reconstructed emissivity vector with shape (#pix,)
         """
-        self.u, self.s, self.v, = self.presolve(gmat, deriv)
+        self.u, self.s, self.v, = self.decompose(gmat, regularisation)
         alpha = self.find_alpha(method)
         self.alpha = alpha
-        g = self.series_expansion(alpha, sig, num=num)
+        g = self.series_expansion(alpha, data, num=num)
         return g
 
-    def __call__(self, data, gmat, dmats, errors, method=None, num=None):
+    # TODO pass regularisation matrix instead of derivatives
+    def __call__(self, data, gmat, derivatives, errors, aniso=1, method=None, num=None):
         """
         Iterates all time slices in data and computes inversion using one of linear algebraic methods.
 
         Parameters
         ----------
-        gmat : np.ndarray
+        data : numpy.ndarray
+            signal with shape (#time slices, #chnls)
+        gmat : numpy.ndarray
             geometry matrix with shape (#chnls, #nodes)
-        data : np.ndarray
-            signal with shape (#slices, #chnls)
-        dmats : 
-            TODO
-        errors : int, float or np.ndarray
-            expected errors used to normalize data, if 1D shape should match #slices or #chnls, for 2D shape should match data shape
-        h : np.ndarray
-            regularisation matrix used in generalised decompositions
+        derivatives : list
+            list of tuples with derivative matrix pairs
+        errors : int, float or numpy.ndarray
+            expected errors used to normalize data, with shape (#slices,), (#chnls,) or (#time slices, #chnls) 
+        aniso : float, optional
+            anisotropic factor making the first 
         method : str, optional
             specifies method used for regularization parameter computation, see method find_alpha
         num : int, optional
@@ -88,44 +95,107 @@ class Algebraic(object):
         """
         nslices = data.shape[0]
         nchnls = data.shape[1]
+        if nchnls != gmat.shape[0]:
+            raise ValueError('Different number of channels in data and gmat')
         nnodes = gmat.shape[1]
 
-        if np.ndim(errors) == 1:
-            if errors.size == data.shape[0]:
-                errors = errors.reshape(1, -1)
-            elif errors.size == data.shape[1]:
+        data_ndim = np.ndim(data)
+        if data_ndim == 0:
+            raise ValueError('Data must be at least an array of values.')
+        elif data_ndim == 1:  # flat data, assume one time slice
+            data = data.reshape(1, -1)
+        elif data_ndim > 2:
+            raise ValueError('Data array has too many dimension.')
+
+        err_ndim = np.ndim(errors)
+        if err_ndim == 0:  # constant errors
+            errors = np.full_like(data, errors)
+        elif err_ndim == 1:  # flat errors, check for matching shape
+            if errors.size == nslices:
                 errors = errors.reshape(-1, 1)
+            elif errors.size == nchnls:
+                errors = errors.reshape(1, -1)
             else:
                 raise ValueError('Incompatible shape of errors {} with the data {}'.format(errors.shape, data.shape))
-        
-        errors = errors * np.ones_like(data)    
+            errors = errors * np.ones_like(data)  # broadcast to right shape
+        elif err_ndim > 2:
+            raise ValueError('Errors array has too many dimensions.')
+
+        if errors.shape != data.shape:
+            raise ValueError(f'Data shape {data.shape} does not match errors shape {errors.shape}.')
+   
         data = data / errors
 
         res = np.empty((nslices, nnodes))
 
-        danis = 1
-        c1 = danis / (1 + danis)
-        c2 = 1 / (1 + danis)
-        # TODO support for list of dmat pairs
-        n_der = len(dmats)
-        hs = np.zeros((n_der, *dmats[0][0].shape))
-        for i in range(n_der):
-            # TODO
-            tmp0 = dmats[i][0].T.dot(dmats[i][0])
-            tmp1 = dmats[i][1].T.dot(dmats[i][1])
-            hs[i, ...] = (c1 * tmp0 + c2 * tmp1).toarray()
-        # h = np.sum(hs).toarray()
-        h = hs.mean(axis=0)
+        reg = self.regularisation_matrix(derivatives, aniso)
+        
         for i in range(data.shape[0]):
             signal = data[i, :].flatten()
-            errs = np.diag(1/errors[i, :])
-            gmat_nrm = errs.dot(gmat)
+            errs = errors[i, :]
+            gmat_nrm = self.normalize_gmat(gmat, errs)
+            #TODO sparse optimization?
             # error_sp = sparse.diags(1/errors[i, :])
             # gmat_nrm = error_sp.dot(gmat).toarray()
-            res[i] = self.invert(signal, gmat_nrm, h, method=method, num=num)
+            res[i] = self.invert(signal, gmat_nrm, reg, method=method, num=num)
         return res
+    
+    # TODO make it an external function
+    def regularisation_matrix(self, derivatives, aniso=1):
+        """
+        Computes regularisation matrix from derivatives matrices.
+
+        Parameters
+        ----------
+        derivatives : _type_
+            _description_
+        aniso : int, optional
+            _description_, by default 1
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
+        # relative weighting
+        w1 = aniso / (1 + aniso)
+        w2 = 1 / (1 + aniso)
+        n_der = len(derivatives)
+        hs = np.zeros((n_der, *derivatives[0][0].shape))
+        for i in range(n_der):
+            # TODO
+            tmp0 = derivatives[i][0].T.dot(derivatives[i][0])
+            tmp1 = derivatives[i][1].T.dot(derivatives[i][1])
+            hs[i, ...] = (w1 * tmp0 + w2 * tmp1).toarray()
+        # h = np.sum(hs).toarray()
+        h = hs.mean(axis=0)
+        return h
+    
+    def normalize_gmat(self, gmat: np.ndarray, errors: np.ndarray) -> np.ndarray:
+        """
+        Normalizes gmat using estimated errors
+
+        Parameters
+        ----------
+        gmat : np.ndarray
+            geometry matrix
+        errors : np.ndarray
+            errors for given time slice shape (#channels,)
+
+        Returns
+        -------
+        np.ndarray
+            normalized geometry matrix
+        """
+        errors = np.diag(1/errors)
+        gmat = errors.dot(gmat)
+        return gmat
 
     def presolve(self, gmat, deriv):
+        self.decompose(gmat, deriv)
+        warn('Presolve method deprecated by decompose method since 1.1', DeprecationWarning)
+
+    def decompose(self, gmat, regularisation):
         """
         Prepares matrices in standard form for series expansion
 
@@ -137,11 +207,11 @@ class Algebraic(object):
 
     def find_alpha(self, *args, **kwargs):
         """
-        Finds regularisation parameter using estimate based on values of diagonal.
+        Finds regularisation parameter.
 
         Returns
         -------
-        numpy.float64
+        float
             regularisation parameter value
         """
         raise NotImplementedError()
@@ -162,7 +232,7 @@ class Algebraic(object):
 
         Parameters
         ----------
-        alpha : numpy.float64
+        alpha : float
             regularisation parameter
         signal : numpy.ndarray
             vector with channel signal
@@ -183,25 +253,30 @@ class Algebraic(object):
 
 
 class FastAlgebraic(Algebraic):
+    """
+    A base class for linear algebraic methods using fast regularisation parameter estimation.
+    
+    The regularisation parameter estimate is based on the diagonal matrix obtained by decomposition.
+    """
     def __init__(self):
         super().__init__()
         return
 
-    def presolve(self, gmat, deriv):
+    def decompose(self, gmat, regularisation):
         raise NotImplementedError()
 
-    def find_alpha(self, method=None):
+    def find_alpha(self, method: str='quantile'):
         """
         Finds regularisation parameter using linear estimate based on values of diagonal.
 
         Parameters
         ----------
         method : str {'mean', 'half', 'median', 'quantile', 'logmean}
-            if None quantile method is used
+            selects method for finding regularisation parameter value, default is quantile
 
         Returns
         -------
-        numpy.float64
+        float
             squared value found by estimation method
         """
         if method is None:
@@ -224,8 +299,8 @@ class FastAlgebraic(Algebraic):
 
 
 class SvdFastAlgebraic(FastAlgebraic):
-    def presolve(self, gmat, deriv):
-        l_mat = np.linalg.cholesky(deriv)
+    def decompose(self, gmat, regularisation):
+        l_mat = np.linalg.cholesky(regularisation)
         p = np.identity(l_mat.shape[0])
         l_inv = np.linalg.inv(l_mat)
         a = l_inv.dot(p).dot(gmat.T)
@@ -236,8 +311,11 @@ class SvdFastAlgebraic(FastAlgebraic):
 
 
 class QrFastAlgebraic(FastAlgebraic):
-    def presolve(self, gmat, deriv):
-        l_mat = np.linalg.cholesky(deriv)
+    def __init__(self):
+        raise NotImplementedError('Not yet finished')
+
+    def decompose(self, gmat, regularisation):
+        l_mat = np.linalg.cholesky(regularisation)
         p = np.identity(l_mat.shape[0])
         l_inv = np.linalg.inv(l_mat)
         a = l_inv.dot(p.dot(gmat.T))
@@ -249,15 +327,16 @@ class QrFastAlgebraic(FastAlgebraic):
 
 
 class GevFastAlgebraic(FastAlgebraic):
-    def presolve(self, gmat, deriv):
+    def decompose(self, gmat, regularisation):
         """
         Decomposes geometry and regularisation matrices to form suitable for series expansion.
-        Uses generalised eigenvalue decomposition described in [1]_
+        
+        Uses generalised eigenvalue decomposition scheme described in [1]_
 
         Parameters
         ----------
         gmat : numpy.ndarray
-        deriv : numpy.ndarray
+        regularisation : numpy.ndarray
             regularisation matrix with shape (#nodes, #nodes)
 
         Returns
@@ -269,7 +348,10 @@ class GevFastAlgebraic(FastAlgebraic):
         .. [1] L.C. Ingesson, "The Mathematics of Some Tomography Algorithms Used at JET," JET Joint Undertaking, 2000
         """
         c = gmat.T.dot(gmat)
-        s, ev = eigsh(c.T, k=gmat.shape[0], M=deriv)
+        c_csr = sparse.csr_matrix(c.T)
+        reg_sparse = sparse.csc_matrix(regularisation)  # csc might be slightly faster that csr?
+        s, ev = eigsh(c_csr, k=gmat.shape[0], M=reg_sparse)
+
         # flip to have eigenvalues and vectors sorted from largest to smallest
         s = s[::-1]
         ev = ev[..., ::-1]
