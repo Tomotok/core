@@ -10,6 +10,6 @@ Currently implemented
  - Biorthogonal Basis Decomposition (BOB)
 """
 
-from .bob import SimpleBob
+from .bob import Bob, SparseBob, SimpleBob, CholmodBob
 from .lame import SvdFastAlgebraic, GevFastAlgebraic
 from .mfr import Mfr, CholmodMfr
