@@ -172,7 +172,7 @@ class SimpleBob(Bob):
     """
     Automatically creates simple one node basis as an sparse identity matrix
 
-    .. Deprecated:: 1.1
+    .. deprecated:: 1.1
     """
 
     def __init__(self, dec_mat=None, basis=None):
