@@ -66,8 +66,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'tomotok'
-copyright = '2021, Tomotok team'
-author = 'Tomotok team'
+copyright = '2021, Institute of Plasma Physics of CAS'
+author = 'J. Svoboda, J. Cavalier, O. Ficker, M. Imríšek and others'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
