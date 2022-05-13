@@ -12,10 +12,12 @@ Together with the Core package, simple GUI for result analysis is distributed.
 The algorithms take numpy.ndarrays or scipy.sparse matrix objects as input to be able to run independently on the rest of the package in order to promote interoperability with other codes (e.g. [ToFu](https://tofuproject.github.io/tofu/))
 
 Currently implemented algorithms:
- - MFR for sparse matrices using scipy.sparse.linalg.spsolve
- - MFR for sparse matrices using cholesky decompsition from scikit.sparse
- - SVD and GEV linear algebraic inversion for dense matrices
- - BOB with simple one node basis (wavelets in preparation)
+ - Minimum Fisher Regularisation for sparse matrices using scipy.sparse.linalg.spsolve
+ - Minimum Fisher Regularisation for sparse matrices using cholesky decomposition from scikit.sparse
+ - SVD linear algebraic inversion for dense matrices
+ - GEV linear algebraic inversion with optimization for sparse matrices
+ - Biorthogonal Basis decomposition for dense matrices
+ - Biorthogonal Basis decomposition optimized for sparse matrices (scipy, cholmod)
 
 ## Auxiliary features
 
