@@ -43,15 +43,23 @@ class Bob(object):
         self.dec_mat_normed = None
         return
 
-    def decompose(self, gmat, basis, reg_factor=0):
+    def decompose(self, gmat, basis, reg_factor=0, solver_kw: dict=None):
         """
         Decomposes the geometry matrix using basis vectors
 
         Parameters
         ----------
-        gmat : sparse.csr_matrix
-            geometry matrix
+        gmat : scipy.sparse.csr_matrix
+            geometry/contribution matrix
+        basis : sparse matrix
+            matrix with basis vectors
+        reg_factor : float, optional
+            regularisation factor passed to cholesky decomposition
+            determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
+        solver_kw : dict
+            keyword parameters passed to the solver function
         """
+        solver_kw = solver_kw or {}
         if gmat.shape[0] < gmat.shape[1]:
             warnings.warn('Biorthogonal algorithm requires more lines of sights than nodes in reconstruction plane to run reliably')
         self.basis = basis
@@ -59,7 +67,7 @@ class Bob(object):
         a = image_base.T.dot(image_base).toarray()  # symmetrized geometry matrix in basis
         if reg_factor:
             a = a + a.max() * reg_factor * np.eye(*a.shape)
-        b = np.eye(gmat.shape[1])
+        b = np.eye(gmat.shape[1], **solver_kw)
         res = np.linalg.lstsq(a, b)
         c = sparse.csr_matrix(res[0])  # coefficient matrix
         self.dec_mat = image_base.dot(c)  # \hat{e}_i previously known as xi, decomposed matrix
@@ -216,28 +224,35 @@ class CholmodBob(Bob):
     Requires positive definite symmetrized geometry matrix in reconstruction plane basis.
     """
 
-    def decompose(self, gmat, basis, reg_factor=1e-3):
+    def decompose(self, gmat, basis, reg_factor=1e-3, solver_kw: dict=None):
         """
+        Decomposes geometry matrix using Cholesky decomposition and projects images
+
         Parameters
         ----------
         gmat : scipy.sparse.csr_matrix
-        basis
+            geometry/contribution matrix
+        basis : sparse matrix
+            matrix with basis vectors
         reg_factor : float, optional
             regularisation factor passed to cholesky decomposition
             determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
+        solver_kw : dict
+            keyword parameters passed to the solver function
         """
+        solver_kw = solver_kw or {}
         from sksparse.cholmod import cholesky, CholmodNotPositiveDefiniteError
         if gmat.shape[0] < gmat.shape[1]:
             warnings.warn('Biorthogonal algorithm can be prone to failure if there are more '
             'lines of sights than nodes in reconstruction plane')
         self.basis = basis
-        chi = gmat.dot(self.basis)
-        a = chi.T.dot(chi)
+        image_base = gmat.dot(self.basis)  # chi
+        a = image_base.T.dot(image_base)
         try:
-            factor = cholesky(a, a.max()*reg_factor)
+            factor = cholesky(a, a.max()*reg_factor, **solver_kw)
         except CholmodNotPositiveDefiniteError:
             raise ValueError('Symmetrized matrix was not positive definite. Try increasing regularisation factor.')
         b = sparse.csc_matrix(np.eye(gmat.shape[1]))
         c = factor(b)
-        self.dec_mat = chi.dot(c)  # xi
+        self.dec_mat = image_base.dot(c)  # xi
         return
