@@ -1,6 +1,7 @@
 import os.path as path
 from setuptools import setup, find_packages
 
+
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
@@ -22,5 +23,5 @@ setup(
     namespace_packages=['tomotok'],
     include_package_data=True,
     python_requires='>=3.5',
-    install_requires=['numpy>=1.16', 'scipy>=1.6', 'matplotlib>=3', 'h5py>=2'],
+    install_requires=['numpy>=1.13.3', 'scipy>=1.1.0', 'matplotlib>=2.2.2', 'h5py>=2.7.1'],
 )

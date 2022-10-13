@@ -122,7 +122,7 @@ class Algebraic(object):
             raise ValueError('Errors array has too many dimensions.')
 
         if errors.shape != data.shape:
-            raise ValueError(f'Data shape {data.shape} does not match errors shape {errors.shape}.')
+            raise ValueError('Data shape {} does not match errors shape {}.'.format(data.shape, errors.shape))
    
         data = data / errors
 

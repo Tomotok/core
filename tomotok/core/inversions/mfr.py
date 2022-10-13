@@ -8,11 +8,9 @@ M. Anton et al., "X-ray tomography on the TCV tokamak.", Plasma Phys. Control. F
 
 J. Mlynar et al., "Current research into applications of tomography for fusion diagnostics." J. Fusion Energy 38.3 (2019): 458-466
 """
-
 import time
 from warnings import warn
 
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sparse
 from scipy.sparse.linalg import spsolve
@@ -284,7 +282,7 @@ class Mfr(object):
             raise ValueError('Errors array has too many dimensions.')
 
         if errors.shape != data.shape:
-            raise ValueError(f'Data shape {data.shape} does not match errors shape {errors.shape}.')
+            raise ValueError('Data shape {} does not match errors shape {}.'.format(data.shape, errors.shape))
 
         signal_nrm = data / errors
 
