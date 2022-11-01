@@ -67,8 +67,8 @@ class Bob(object):
         a = image_base.T.dot(image_base).toarray()  # symmetrized geometry matrix in basis
         if reg_factor:
             a = a + a.max() * reg_factor * np.eye(*a.shape)
-        b = np.eye(gmat.shape[1], **solver_kw)
-        res = np.linalg.lstsq(a, b)
+        b = np.eye(gmat.shape[1])
+        res = np.linalg.lstsq(a, b, **solver_kw)
         c = sparse.csr_matrix(res[0])  # coefficient matrix
         self.dec_mat = image_base.dot(c)  # \hat{e}_i previously known as xi, decomposed matrix
         return
