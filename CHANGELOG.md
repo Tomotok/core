@@ -1,3 +1,22 @@
+Version 1.3 ()
+==============
+
+Fixes
+-----
+ - keywords passing to BOB
+
+Version 1.2 (14.10.2022)
+========================
+
+New Features
+------------
+ - BOB decomposition supports passing keywords to the inversion solver
+
+Fixes
+-----
+ - corrected dependencies versions
+ - replaced f strings by format method
+
 Version 1.1 (12.05.2022)
 ========================
 

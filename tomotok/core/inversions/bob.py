@@ -2,7 +2,7 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Contains inversion class for Biorthogonal Basis Decomposition Algorithm [1]_ derrived from wavelet-vaguelette decomposition [2]_
+Contains inversion class for Biorthogonal Basis Decomposition Algorithm [1]_ derived from wavelet-vaguelette decomposition [2]_
 
 .. [1] Jordan Cavalier et al 2019 Nucl. Fusion 59 056025
 .. [2] R. Nguyen van yen et al 2011 Nucl. Fusion 52 013005
@@ -84,8 +84,16 @@ class Bob(object):
         gmat : scipy.sparse.csr_matrix
             geometry matrix
         thresholding : float, optional
-            if provided, result is processed using thresholding, not performed by default 
+            not implemented
+        
+        Returns
+        -------
+        numpy.ndarray
+            inversion results with shape (# nodes, # time slices)
         """
+        # TODO transpose data and res?
+        if thresholding is not None:
+            warnings.warn('Thresholding not implemented to call method. Ignoring.')
         if self.dec_mat is None:
             if gmat is None:
                 raise ValueError('Gmat must be provided for decomposition')
@@ -154,7 +162,7 @@ class Bob(object):
         Raises
         ------
         RuntimeError
-            If tresholding is called before decomposition of geometry matrix
+            If thresholding is called before decomposition of geometry matrix
         """
         if self.dec_mat is None:
             raise RuntimeError('Decomposition must be computed prior to thresholding.')
@@ -184,7 +192,7 @@ class SimpleBob(Bob):
     """
 
     def __init__(self, dec_mat=None, basis=None):
-        warnings.warn('SimpleBob is depracated since v1.1', DeprecationWarning)
+        warnings.warn('SimpleBob is deprecated since v1.1', DeprecationWarning)
         super().__init__(dec_mat, basis)
     
     def decompose(self, gmat, basis=None):
@@ -199,20 +207,22 @@ class SparseBob(Bob):
     Biorthogonal Basis Decomposition optimized for sparse matrices using inverse matrix calculation.
     """
 
-    def decompose(self, gmat, basis, reg_factor=0):
+    def decompose(self, gmat, basis, reg_factor=0, solver_kw=None):
+        if solver_kw is not None:
+            raise TypeError('scipy.sparse.linalg.inv does not take any keywords')
         if gmat.shape[0] < gmat.shape[1]:
             warnings.warn('Biorthogonal algorithm requires more '
             'lines of sights than nodes in reconstruction plane to run reliably')
         self.basis = basis
-        chi = gmat.dot(self.basis)
-        a = chi.T.dot(chi)
+        image_base = gmat.dot(self.basis)  # chi
+        a = image_base.T.dot(image_base)
         if reg_factor:
             a = a + a.max() * reg_factor * sparse.eye(*a.shape)
         try:
             c = sparse.linalg.inv(a)
         except RuntimeError:
             raise ValueError('Singular symmetrized matrix factor. Try increasing regularisation factor.')
-        self.dec_mat = chi.dot(c)  # xi
+        self.dec_mat = image_base.dot(c)  # xi
         return
 
 
@@ -224,7 +234,7 @@ class CholmodBob(Bob):
     Requires positive definite symmetrized geometry matrix in reconstruction plane basis.
     """
 
-    def decompose(self, gmat, basis, reg_factor=1e-3, solver_kw: dict=None):
+    def decompose(self, gmat, basis, reg_factor=1e-3, solver_kw=None):
         """
         Decomposes geometry matrix using Cholesky decomposition and projects images
 
