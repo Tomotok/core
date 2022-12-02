@@ -46,6 +46,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
+    'sphinx.ext.githubpages',
     'numpydoc',
     # 'sphinx_markdown_builder',
 ]

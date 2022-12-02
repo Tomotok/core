@@ -192,6 +192,10 @@ class Algebraic(object):
         return gmat
 
     def presolve(self, gmat, deriv):
+        """
+        .. deprecated :: 1.1
+            Use :meth:`decompose`  
+        """
         self.decompose(gmat, deriv)
         warn('Presolve method deprecated by decompose method since 1.1', DeprecationWarning)
 
@@ -331,7 +335,7 @@ class GevFastAlgebraic(FastAlgebraic):
         """
         Decomposes geometry and regularisation matrices to form suitable for series expansion.
         
-        Uses generalised eigenvalue decomposition scheme described in [1]_
+        Uses generalised eigenvalue decomposition scheme described by L. C. Ingesson in [GEV]_
 
         Parameters
         ----------
@@ -345,7 +349,7 @@ class GevFastAlgebraic(FastAlgebraic):
 
         References
         ----------
-        .. [1] L.C. Ingesson, "The Mathematics of Some Tomography Algorithms Used at JET," JET Joint Undertaking, 2000
+        .. [GEV] L.C. Ingesson, "The Mathematics of Some Tomography Algorithms Used at JET," JET Joint Undertaking, 2000
         """
         c = gmat.T.dot(gmat)
         c_csr = sparse.csr_matrix(c.T)

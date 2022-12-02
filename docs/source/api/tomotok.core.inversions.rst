@@ -16,6 +16,7 @@ tomotok.core.inversions.bob module
     :members:
     :undoc-members:
     :show-inheritance:
+    :special-members: __call__
 
 tomotok.core.inversions.lame module
 -----------------------------------
@@ -24,6 +25,7 @@ tomotok.core.inversions.lame module
     :members:
     :undoc-members:
     :show-inheritance:
+    :special-members: __call__
 
 tomotok.core.inversions.mfr module
 ----------------------------------
@@ -32,5 +34,6 @@ tomotok.core.inversions.mfr module
     :members:
     :undoc-members:
     :show-inheritance:
+    :special-members: __call__
 
 

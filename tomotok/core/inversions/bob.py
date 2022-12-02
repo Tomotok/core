@@ -2,10 +2,11 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Contains inversion class for Biorthogonal Basis Decomposition Algorithm [1]_ derived from wavelet-vaguelette decomposition [2]_
+Contains inversion class for Biorthogonal Basis Decomposition Algorithm proposed by J. Cavlier. 
+It is a simplified form of wavelet-vaguelette decomposition algorithm by R. Nguyen van Yen
 
-.. [1] Jordan Cavalier et al 2019 Nucl. Fusion 59 056025
-.. [2] R. Nguyen van yen et al 2011 Nucl. Fusion 52 013005
+.. [BOB1] Jordan Cavalier et al., Nucl. Fusion 59 (2019): 056025
+.. [BOB2] R. Nguyen van Yen et al., Nucl. Fusion 52 (2011): 013005
 """
 import warnings
 
