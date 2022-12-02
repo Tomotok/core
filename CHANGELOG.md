@@ -4,6 +4,7 @@ Version 1.3 ()
 Fixes
 -----
  - keywords passing to BOB
+ - MFR accepts 1d signal
 
 Version 1.2 (14.10.2022)
 ========================

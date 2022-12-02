@@ -2,11 +2,11 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Minimun Fisher Regularisation implemented based on M. Anton and J. Mlynar
+Minimum Fisher Regularisation implemented based on articles by M. Anton and J. Mlynar
 
-M. Anton et al., "X-ray tomography on the TCV tokamak.", Plasma Phys. Control. Fusion  38.11 (1996): 1849.
+.. [MFR1] M. Anton et al., "X-ray tomography on the TCV tokamak.", Plasma Phys. Control. Fusion  38.11 (1996): 1849.
 
-J. Mlynar et al., "Current research into applications of tomography for fusion diagnostics." J. Fusion Energy 38.3 (2019): 458-466
+.. [MFR2] J. Mlynar et al., "Current research into applications of tomography for fusion diagnostics." J. Fusion Energy 38.3 (2019): 458-466
 """
 import time
 from warnings import warn
@@ -163,6 +163,10 @@ class Mfr(object):
         return g, stats
 
     def smoothing_mat(self, w, derivatives, danis):
+        """
+        .. deprecated :: 1.1
+            Use :meth:`regularisation_matrix`  
+        """
         warn('Smoothing_mat deprecated by regularisation_matrix method since v1.1.', DeprecationWarning)
         self.regularisation_matrix(derivatives, w, danis)
 
@@ -246,6 +250,10 @@ class Mfr(object):
             tomographic reconstruction, with shape (#time slices, #nodes)
         stats_list : list of dicts
             contains dicts with inversion statistics returned by invert method
+        
+        See also
+        --------
+        invert
         """
         try:
             kwargs['aniso'] = kwargs.pop('danis')
@@ -253,19 +261,22 @@ class Mfr(object):
         except KeyError:
             pass
 
+        data_ndim = np.ndim(data)
+        if data_ndim == 0:
+            raise ValueError('Data must be at least an 1D array of values.')
+        elif data_ndim == 1:  # flat data, assume one time slice
+            data = data.reshape(1, -1)
+        elif data_ndim > 2:
+            raise ValueError('Data array has too many dimension: {}. Max is 2.'.format(data_ndim))
+
+        if len(gmat.shape) != 2:
+            raise ValueError('Gmat must be a 2D array or matrix')
+
         nslices = data.shape[0]
         nchnls = data.shape[1]
         if nchnls != gmat.shape[0]:
             raise ValueError('Different number of channels in data and gmat')
         nnodes = gmat.shape[1]
-
-        data_ndim = np.ndim(data)
-        if data_ndim == 0:
-            raise ValueError('Data must be at least an array of values.')
-        elif data_ndim == 1:  # flat data, assume one time slice
-            data = data.reshape(1, -1)
-        elif data_ndim > 2:
-            raise ValueError('Data array has too many dimension.')
 
         err_ndim = np.ndim(errors)
         if err_ndim == 0:  # constant errors
@@ -301,9 +312,10 @@ class Mfr(object):
 
 class CholmodMfr(Mfr):
     """
-    Implementation of sparse cholesky decomposition as solve method for standard MFR algorithm.
+    Uses sparse cholesky decomposition for solving the parameter optimisation task in MFI loop.
+    Requires scikit sparse to be installed in order to initialize properly.
 
-    Uses scikit.sparse package imported in init to solve the regularised task.
+    Uses sksparse.cholmod.cholesky to solve the regularised task in parameter optimisation.
     """
     def __init__(self):
         """
