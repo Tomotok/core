@@ -14,4 +14,4 @@ Citations
 ---------
 If used for a scientific publication, please cite the software using the references below together with references for inversion methods used. These can be found in section :doc:`inversions/inversions`.
 
-"J. Svoboda, J. Cavalier, O.Ficker, M. Imrisek, J. Mlynar and M. Hron, *Tomotok: python package for tomography of tokamak plasma radiation*, 4th ECPD Conference (2021), Journal of Instrumentation"
+"J. Svoboda, J. Cavalier, O. Ficker, M. Imríšek, J. Mlynář and M. Hron, Tomotok: python package for tomography of tokamak plasma radiation, Journal of Instrumentation 16.12 (2021): C12015." `DOI 10.1088/1748-0221/16/12/C12015 <http://doi.org/10.1088/1748-0221/16/12/c12015>`_

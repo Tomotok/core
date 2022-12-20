@@ -5,6 +5,7 @@ Fixes
 -----
  - keywords passing to BOB
  - MFR accepts 1d signal
+ - tomotok article citation info
 
 Version 1.2 (14.10.2022)
 ========================
