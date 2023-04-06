@@ -10,8 +10,11 @@ It is a simplified form of wavelet-vaguelette decomposition algorithm by R. Nguy
 """
 import warnings
 
+import h5py
 import numpy as np
 import scipy.sparse as sparse
+
+from tomotok.core.tools.hdf import sparse_to_hdf, hdf_to_sparse
 
 
 class Bob(object):
@@ -20,12 +23,14 @@ class Bob(object):
 
     Attributes
     ----------
-    basis : array_like
+    basis : scipy.sparse.dia_matrix
         :math:`\mathbf{b}_i` basis vectors of reconstruction plane
     dec_mat : scipy.sparse.csr_matrix
         :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
     dec_mat_normed : scipy.sparse.csr_matrix
         normalised decomposed matrix
+    norms : numpy.ndarray
+        node norms used in thresholding
     """
 
     def __init__(self, dec_mat=None, basis=None):
@@ -41,6 +46,7 @@ class Bob(object):
         super().__init__()
         self.basis = basis
         self.dec_mat = dec_mat
+        self.norms = None
         self.dec_mat_normed = None
         return
 
@@ -104,23 +110,46 @@ class Bob(object):
         res = self.basis.dot(coeffs)  # result in node basis
         return res
 
-    # TODO remove? remove normalised parameter?
-    def save_decomposition(self, floc, normalised=False):
+    def save_decomposition(self, floc, description=''):
         """
-        Saves 
+        Saves decomposition matrix and basis to hdf file. Norms are also included if calculated.
 
         Parameters
         ----------
         floc : str or pathlib.Path
             file location with name
-        normalised : bool, optional
-            selects whether to save normalised matrix, by default False
+        description : str, optional
+            short user description for file identification
         """
+        if self.dec_mat is None:
+            raise ValueError('Can not save decomposition before it is calculated.')
         floc = str(floc)
-        if normalised:
-            sparse.save_npz(floc, self.dec_mat_normed, compressed=True)
-        else:
-            sparse.save_npz(floc, self.dec_mat, compressed=True)
+        with h5py.File(floc, 'w') as f:
+            f.attrs['version'] = '0.1'
+            f.attrs['description'] = description
+            dec_mat = f.create_group('decomposed_matrix')
+            sparse_to_hdf(self.dec_mat, dec_mat)
+            basis = f.create_group('basis')
+            sparse_to_hdf(self.basis, basis)
+            if self.norms is not None:
+                f.create_dataset('norms', data=self.norms)
+    
+    def load_decomposition(self, floc):
+        """
+
+        Parameters
+        ----------
+        floc : str or pathlib.Path
+            location of hdf file with saved decomposition
+        """
+        with h5py.File(floc, 'r') as f:
+            self.dec_mat = hdf_to_sparse(f['decomposed_matrix'])
+            self.basis = hdf_to_sparse(f['basis'])
+            try:
+                self.norms = f['norms'][:]
+            except KeyError:
+                self.norms = None
+        return
 
     def normalise(self, precision=1e-6):
         """
@@ -156,8 +185,6 @@ class Bob(object):
         norms[idx] = (1 / kappa[idx])
         self.norms = norms[:, None]  # change to expected shape
 
-    # TODO replace image by reconstruction?
-    # TODO return mask only?
     def thresholding(self, image, c: int, precision: float=1e-6, conv: float=1e-9):
         """
         Applies thresholding method to provided image.
