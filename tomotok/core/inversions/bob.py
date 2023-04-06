@@ -136,8 +136,25 @@ class Bob(object):
         idx = kappa > precision
         norms = np.zeros(kappa.size)
         norms[idx] = (1 / kappa[idx])
-        xi_norm = image_base_adj.multiply(sparse.csr_matrix(norms))
-        self.dec_mat_normed = xi_norm
+        # xi_norm
+        self.dec_mat_normed = image_base_adj.multiply(sparse.csr_matrix(norms))
+        self.norms = norms[:, None]  # change to expected shape
+    
+    def _normalise_wo_mat(self, precision=1e-6):
+        """
+        Computes norms for reconstruction nodes.
+
+        Parameters
+        ----------
+        precision : float, optional
+            neglects decomposition matrix rows with lower norm, by default 1e-6
+        """
+        image_base_adj = self.dec_mat
+        kappa = sparse.linalg.norm(image_base_adj, axis=0)
+        idx = kappa > precision
+        norms = np.zeros(kappa.size)
+        norms[idx] = (1 / kappa[idx])
+        self.norms = norms[:, None]  # change to expected shape
 
     # TODO replace image by reconstruction?
     # TODO return mask only?
@@ -167,11 +184,14 @@ class Bob(object):
         """
         if self.dec_mat is None:
             raise RuntimeError('Decomposition must be computed prior to thresholding.')
-        if self.dec_mat_normed is None:
+        if self.norms is None:
             self.normalise(precision)
-        temp = sparse.csr_matrix(image)
-        a = np.abs(self.dec_mat_normed.T.dot(temp).toarray())
 
+        # calculate plane basis coefficients
+        coeffs = self.dec_mat.T @ image
+
+        # thresholding loop
+        a = np.abs(coeffs * self.norms)  # normalised coefficients
         threshold_2 = np.sqrt(c**2 / a.size * a.T.dot(a))
         threshold_1 = 0
         while np.abs(threshold_1-threshold_2) >= conv:
@@ -179,9 +199,9 @@ class Bob(object):
             a_temp = a[a <= threshold_1]
             threshold_2 = np.sqrt(c**2 / a_temp.size * a_temp.T.dot(a_temp))
 
-        out = self.dec_mat.T.dot(image)
-        out = self.basis.dot(out)
-        out[a < threshold_2] = 0
+        # remove plane basis with contributions below threshold and transform to nodes
+        coeffs[a < threshold_2] = 0
+        out = self.basis @ coeffs
         return out
 
 
