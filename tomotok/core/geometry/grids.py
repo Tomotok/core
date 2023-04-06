@@ -7,7 +7,7 @@ Contains class describing regularly spaced node grid
 from typing import Tuple
 
 import numpy as np
-from matplotlib.path import Path
+from matplotlib.path import Path as MplPath
 
 
 class RegularGrid(object):
@@ -127,7 +127,7 @@ class RegularGrid(object):
 
     def is_inside(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
-        Determines whether node centers are inside given polygon.
+        Selects nodes with centers inside given polygon.
 
         Parameters
         ----------
@@ -143,9 +143,40 @@ class RegularGrid(object):
         rm, zm = rm.flatten(), zm.flatten()
         points = np.stack((rm, zm), axis=1)
         limiter_coords = np.stack((r, z), axis=1)
-        p = Path(limiter_coords)
+        p = MplPath(limiter_coords)
         grid_points = p.contains_points(points)
         inside = grid_points.reshape(self.shape)
+        return inside
+    
+    def is_inside_any(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
+        """
+        Selects nodes with at least one corner inside given polygon.
+
+        Parameters
+        ----------
+        r, z : numpy.ndarray
+            Coordinate vectors of polygon
+
+        Returns
+        -------
+        numpy.ndarray
+            Mask matrix for pixgrid with True values for nodes inside polygon
+        """
+        rm, zm = np.meshgrid(self.r_border, self.z_border)
+        rm, zm = rm.flatten(), zm.flatten()
+        points = np.stack((rm, zm), axis=1)
+        limiter_coords = np.stack((r, z), axis=1)
+        p = MplPath(limiter_coords)
+        corners = p.contains_points(points)
+        corners = corners.reshape((self.nz+1, self.nr+1))
+        inside = np.zeros(self.shape, dtype=bool)
+        for i in range(self.nz):
+            for j in range(self.nr):
+                bl = corners[i, j]
+                br = corners[i, j+1]
+                tl = corners[i+1, j]
+                tr = corners[i+1, j+1]
+                inside[i, j] = any([bl, br, tl, tr])
         return inside
 
     def corners(self, mask: np.ndarray=None) -> np.ndarray:
