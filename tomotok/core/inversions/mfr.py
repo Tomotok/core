@@ -134,6 +134,7 @@ class Mfr(object):
         g = np.ones(npix)
         mfi_count = 0
         niter = []
+        logalpha = []
         while mfi_count < mfi_num:
             # MFI loop searching for ideal value of regularisation parameter
             w = 1 / g
@@ -151,11 +152,11 @@ class Mfr(object):
             if res.status == 1:
                 warn('Maximum number of iteration in MFI loop reached. Consider increasing iter_max.')
             niter.append(res.nfev)
+            logalpha.append(res.x)
             # TODO write custom optimisation routine to avoid recalculating optimal solution?
             m = self._gdg + 10 ** res.x * objective
             g = self.solve(m, self._gdsig)
             mfi_count += 1
-        logalpha = res.x
         last_chi = self._pearson_test(g)
         ela = time.time() - ela
         print('last chi^2 = {:.4f}, time: {:.2f} s'.format(last_chi, ela))

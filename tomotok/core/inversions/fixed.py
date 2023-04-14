@@ -44,7 +44,7 @@ class Fixt(object):
         """
         return spsolve(a, b)
 
-    def invert(self, signals, gmat, derivatives, parameter, w_factor=None, mfi_num=3, w_max=1,
+    def invert(self, signals, gmat, derivatives, parameters, w_factor=None, mfi_num=3, w_max=1,
                aniso=0):
         """
         Inverses normalised signals using fixed value of regularisation parameter.
@@ -59,8 +59,8 @@ class Fixt(object):
             geometry matrix normalised by estimated errors
         derivatives : list
             list of tuples containing pairs of sparse derivatives matrices
-        parameter : float
-            regularisation parameter value
+        parameters : float or list of float
+            regularisation parameter value(s), list length must match mfi_num
         w_factor : numpy.ndarray, optional
             weight matrix multipliers with shape (#nodes, )
         w_max : float, optional
@@ -86,6 +86,11 @@ class Fixt(object):
         --------
         regularisation_matrix
         """
+        if isinstance(parameters, float):
+            parameters = mfi_num * [parameters]
+        elif len(parameters) != mfi_num:
+            msg = 'Different number of regularisation parameters: {} and MFI loops: {}.'
+            raise ValueError(msg.format(len(parameters), mfi_num))
         ela = time.time()
         self._signal = signals
         self._gmat = gmat
@@ -93,22 +98,23 @@ class Fixt(object):
         self._gdsig = gmat.T.dot(signals)
         npix = gmat.shape[1]
         g = np.ones(npix)
-        mfi_count = 0
-        while mfi_count < mfi_num:
-            # MFI loop searching for ideal value of regularisation parameter
+        chis = []
+        mfi_counter = 0
+        while mfi_counter < mfi_num:
             w = 1 / g
             w[w < 0] = w_max
             w = sparse.diags(w)
             if w_factor is not None:
                 w = w * sparse.diags(w_factor)
             objective = self.regularisation_matrix(derivatives, w, aniso)
-            m = self._gdg + parameter * objective
+            m = self._gdg + parameters[mfi_counter] * objective
             g = self.solve(m, self._gdsig)
-            mfi_count += 1
-        last_chi = self._pearson_test(g)
+            mfi_counter += 1
+            last_chi = self._pearson_test(g)
+            chis.append(last_chi)
         ela = time.time() - ela
         print('last chi^2 = {:.4f}, time: {:.2f} s'.format(last_chi, ela))
-        stats = dict(chi=last_chi, parameter=parameter)
+        stats = dict(chi=chis, parameter=parameters)
         return g, stats
 
     def smoothing_mat(self, w, derivatives, danis):
@@ -175,7 +181,7 @@ class Fixt(object):
         res = np.average(misfit_sq)
         return res
 
-    def __call__(self, data, gmat, derivatives, errors, parameter, **kwargs):
+    def __call__(self, data, gmat, derivatives, errors, parameters, **kwargs):
         """
         Normalises signal and geometry matrix using estimated errors of measurement and
         then executes a sequence of MFR reconstructions.
@@ -190,8 +196,8 @@ class Fixt(object):
             list of tuples with derivative matrix pairs
         errors : int, float or np.ndarray
             Can have shapes (#channels, ), (#time slices,) or (#time slices, #channels)
-        parameter : float
-            regularisation parameter value
+        parameters : float or list of float
+            regularisation parameter value(s), list length must match mfi_num
         **kwargs : dict
             keywords passed to invert method
         
@@ -255,7 +261,7 @@ class Fixt(object):
             signal_np = signal_nrm[i, :]
             error_sp = sparse.diags(1/errors[i, :])
             gmat_nrm = error_sp.dot(gmat)
-            res[i], stats = self.invert(signal_np, gmat_nrm, derivatives, parameter, **kwargs)
+            res[i], stats = self.invert(signal_np, gmat_nrm, derivatives, parameters, **kwargs)
             stats_list.append(stats)
 
         return res, stats_list
