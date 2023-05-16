@@ -23,8 +23,6 @@ class Mfr(object):
 
     Attributes
     ----------
-    last_chi : float
-        person test result of the last computed inversion
     logalpha : float
         :math:`\log(\alpha)` logarithm of regularisation parameter
     gmat : numpy.ndarray
@@ -77,7 +75,7 @@ class Mfr(object):
         return abs(chi2 - 1)
 
     def invert(self, signals, gmat, derivatives, w_factor=None, mfi_num=3, bounds=(-15, 0), iter_max=15, w_max=1,
-               aniso=0, tolerance=0.05):
+               aniso=0, tolerance=0.05, zero_negative=False):
         """
         Inverses normalised signals using `mfi_num` Fisher Information cycles each with 
         `iter_max` steps of regularisation parameter optimisation.
@@ -89,7 +87,7 @@ class Mfr(object):
         signals : numpy.ndarray
             error normalised signals on detector channels
         gmat : scipy.sparse.csr_matrix
-            geometry matrix normalised by estimated errors
+            geometry matrix normalised by estimated errors, shape (#channels, #nodes)
         derivatives : list
             list of tuples containing pairs of sparse derivatives matrices
         w_factor : numpy.ndarray, optional
@@ -106,6 +104,8 @@ class Mfr(object):
             Determines anisotropy of derivative matrices
         tolerance : float, optional
             End MFI loop if residuum reaches interval (1-tolerance; 1+tolerance), by default 0.05
+        zero_negative : bool
+            sets negative values in previous step result to zero when initializing MFI loop
 
         Returns
         -------
@@ -113,13 +113,12 @@ class Mfr(object):
             vector with nodes emissivities, shape (#nodes, )
         stats : dict
             inversion statistics
-
-                chi : float
-                    Pearson test value of final result
-                niter : list of int
+                chi : list of float
+                    Pearson test value of each optimization result
+                iter_num : list of int
                     numbers of iterations taken in each MFI loop
-                logalpha : float
-                    logarithm of final regularisation parameter
+                logalpha : list of float
+                    final regularisation parameter logarithm of each MFI loop
 
         See Also
         --------
@@ -128,13 +127,13 @@ class Mfr(object):
         ela = time.time()
         self._signal = signals
         self._gmat = gmat
-        self._gdg = gmat.T.dot(gmat)
-        self._gdsig = gmat.T.dot(signals)
-        npix = gmat.shape[1]
-        g = np.ones(npix)
+        self._gdg = gmat.T @ gmat
+        self._gdsig = gmat.T @ signals
+        g = np.ones(gmat.shape[1])
         mfi_count = 0
-        niter = []
-        logalpha = []
+        iter_nums = []
+        alphas = []
+        chis = []
         while mfi_count < mfi_num:
             # MFI loop searching for ideal value of regularisation parameter
             w = 1 / g
@@ -142,26 +141,49 @@ class Mfr(object):
             w = sparse.diags(w)
             if w_factor is not None:
                 w = w * sparse.diags(w_factor)
-            objective = self.regularisation_matrix(derivatives, w, aniso)
-            res = minimize_scalar(self._test_regularization,
-                                  method='bounded',
-                                  bounds=bounds,
-                                  args=objective,
-                                  options={'maxiter': iter_max, 'xatol': tolerance},
-                                  )
-            if res.status == 1:
-                warn('Maximum number of iteration in MFI loop reached. Consider increasing iter_max.')
-            niter.append(res.nfev)
-            logalpha.append(res.x)
-            # TODO write custom optimisation routine to avoid recalculating optimal solution?
-            m = self._gdg + 10 ** res.x * objective
+            if zero_negative:
+                g[g < 0] = 0
+            regularisation, stats = self.determine_regularisation(
+                derivatives,
+                w,
+                aniso,
+                bounds,
+                iter_max,
+                tolerance
+            )
+            iter_nums.append(stats['iter_num'])
+            alphas.append(stats['logalpha'])
+            m = self._gdg + regularisation
             g = self.solve(m, self._gdsig)
+            chi_sq = self._pearson_test(g)
+            chis.append(chi_sq)
             mfi_count += 1
-        last_chi = self._pearson_test(g)
+        # logalpha = res.x
         ela = time.time() - ela
-        print('last chi^2 = {:.4f}, time: {:.2f} s'.format(last_chi, ela))
-        stats = dict(chi=last_chi, logalpha=logalpha, niter=niter)
+        print('last chi^2 = {:.4f}, time: {:.2f} s'.format(chis[-1], ela))
+        stats = dict(chi=chis, logalpha=alphas, iter_num=iter_nums)
         return g, stats
+
+    def determine_regularisation(self, derivatives, w, aniso, bounds, iter_max, tolerance):
+        """
+        Uses minimize scalar function from scipy to iteratively minimize chi square (Pearson test).
+        """
+        stats = dict()
+        objective = self.regularisation_matrix(derivatives, w, aniso)
+        # TODO write custom optimisation routine to avoid recalculating optimal solution to get chi sq
+        res = minimize_scalar(
+            self._test_regularization,
+            method='bounded',
+            bounds=bounds,
+            args=objective,
+            options={'maxiter': iter_max, 'xatol': tolerance},
+        )
+        if res.status == 1:
+            warn('Maximum number of iteration in MFI loop reached. Consider increasing iter_max.')
+        stats['iter_num'] = res.nfev
+        stats['logalpha'] = res.x
+        regularisation = 10**res.x * objective
+        return regularisation, stats
 
     def smoothing_mat(self, w, derivatives, danis):
         """
@@ -224,8 +246,8 @@ class Mfr(object):
         retrofit = self._gmat.dot(g)
         misfit = retrofit - self._signal
         misfit_sq = np.power(misfit, 2)
-        res = np.average(misfit_sq)
-        return res
+        self._chisq = np.average(misfit_sq)
+        return self._chisq
 
     def __call__(self, data, gmat, derivatives, errors, **kwargs):
         """
