@@ -28,7 +28,7 @@ class Bob(object):
     dec_mat : scipy.sparse.csr_matrix
         :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
     dec_mat_normed : scipy.sparse.csr_matrix
-        normalised decomposed matrix
+        normalised decomposed matrix, deprecated v1.3
     norms : numpy.ndarray
         node norms used in thresholding
     """
@@ -47,7 +47,6 @@ class Bob(object):
         self.basis = basis
         self.dec_mat = dec_mat
         self.norms = None
-        self.dec_mat_normed = None
         return
 
     def decompose(self, gmat, basis, reg_factor=0, solver_kw: dict=None):
@@ -70,14 +69,14 @@ class Bob(object):
         if gmat.shape[0] < gmat.shape[1]:
             warnings.warn('Biorthogonal algorithm requires more lines of sights than nodes in reconstruction plane to run reliably')
         self.basis = basis
-        image_base = gmat.dot(self.basis)  # e_i previously known as chi, gmat in basis
-        a = image_base.T.dot(image_base).toarray()  # symmetrized geometry matrix in basis
+        image_base = gmat @ self.basis  # e_i previously known as chi, gmat in basis
+        a = (image_base.T @ image_base).toarray()  # symmetrized geometry matrix in basis
         if reg_factor:
             a = a + a.max() * reg_factor * np.eye(*a.shape)
         b = np.eye(gmat.shape[1])
         res = np.linalg.lstsq(a, b, **solver_kw)
         c = sparse.csr_matrix(res[0])  # coefficient matrix
-        self.dec_mat = image_base.dot(c)  # \hat{e}_i previously known as xi, decomposed matrix
+        self.dec_mat = image_base @ c  # \hat{e}_i previously known as xi, decomposed matrix
         return
 
     def __call__(self, data, gmat=None, thresholding=None, **kw):
@@ -106,8 +105,8 @@ class Bob(object):
                 raise ValueError('Gmat must be provided for decomposition')
             else:
                 self.decompose(gmat)
-        coeffs = self.dec_mat.T.dot(data)  # coordinates in reconstruction basis
-        res = self.basis.dot(coeffs)  # result in node basis
+        coeffs = self.dec_mat.T @ data  # coordinates in decomposition basis
+        res = self.basis @ coeffs  # result in node basis
         return res
 
     def save_decomposition(self, floc, description=''):
@@ -168,25 +167,19 @@ class Bob(object):
         idx = kappa > precision
         norms = np.zeros(kappa.size)
         norms[idx] = (1 / kappa[idx])
-        # xi_norm
-        self.dec_mat_normed = image_base_adj.multiply(sparse.csr_matrix(norms))
         self.norms = norms[:, None]  # change to expected shape
-    
-    def _normalise_wo_mat(self, precision=1e-6):
-        """
-        Computes norms for reconstruction nodes.
 
-        Parameters
-        ----------
-        precision : float, optional
-            neglects decomposition matrix rows with lower norm, by default 1e-6
+    @property
+    def dec_mat_normed(self):
         """
-        image_base_adj = self.dec_mat
-        kappa = sparse.linalg.norm(image_base_adj, axis=0)
-        idx = kappa > precision
-        norms = np.zeros(kappa.size)
-        norms[idx] = (1 / kappa[idx])
-        self.norms = norms[:, None]  # change to expected shape
+        .. deprecated :: 1.3
+        """
+        warnings.warn('dec_mat_normed was deprecated in v1.3', DeprecationWarning)
+        if self.norms is None:
+            return None
+        else:
+            return self.dec_mat.multiply(sparse.csr_matrix(self.norms[:, 0]))
+
 
     def thresholding(self, image, c: int, precision: float=1e-6, conv: float=1e-9):
         """
@@ -222,12 +215,12 @@ class Bob(object):
 
         # thresholding loop
         a = np.abs(coeffs * self.norms)  # normalised coefficients
-        threshold_2 = np.sqrt(c**2 / a.size * a.T.dot(a))
+        threshold_2 = np.sqrt(c**2 / a.size * a.T @ a)
         threshold_1 = 0
         while np.abs(threshold_1-threshold_2) >= conv:
             threshold_1 = threshold_2
             a_temp = a[a <= threshold_1]
-            threshold_2 = np.sqrt(c**2 / a_temp.size * a_temp.T.dot(a_temp))
+            threshold_2 = np.sqrt(c**2 / a_temp.size * a_temp.T @ a_temp)
 
         # remove plane basis with contributions below threshold and transform to nodes
         coeffs[a < threshold_2] = 0
@@ -265,15 +258,15 @@ class SparseBob(Bob):
             warnings.warn('Biorthogonal algorithm requires more '
             'lines of sights than nodes in reconstruction plane to run reliably')
         self.basis = basis
-        image_base = gmat.dot(self.basis)  # chi
-        a = image_base.T.dot(image_base)
+        image_base = gmat @ self.basis  # chi
+        a = image_base.T @ image_base
         if reg_factor:
             a = a + a.max() * reg_factor * sparse.eye(*a.shape)
         try:
             c = sparse.linalg.inv(a)
         except RuntimeError:
             raise ValueError('Singular symmetrized matrix factor. Try increasing regularisation factor.')
-        self.dec_mat = image_base.dot(c)  # xi
+        self.dec_mat = image_base @ c  # xi
         return
 
 
@@ -307,13 +300,13 @@ class CholmodBob(Bob):
             warnings.warn('Biorthogonal algorithm can be prone to failure if there are more '
             'lines of sights than nodes in reconstruction plane')
         self.basis = basis
-        image_base = gmat.dot(self.basis)  # chi
-        a = image_base.T.dot(image_base)
+        image_base = gmat @ self.basis  # chi
+        a = image_base.T @ image_base
         try:
             factor = cholesky(a, a.max()*reg_factor, **solver_kw)
         except CholmodNotPositiveDefiniteError:
             raise ValueError('Symmetrized matrix was not positive definite. Try increasing regularisation factor.')
         b = sparse.csc_matrix(np.eye(gmat.shape[1]))
         c = factor(b)
-        self.dec_mat = image_base.dot(c)  # xi
+        self.dec_mat = image_base @ c  # xi
         return
