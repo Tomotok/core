@@ -136,6 +136,9 @@ class Bob(object):
     
     def load_decomposition(self, floc):
         """
+        Loads decomposed matrix and basis from an HDF file.
+
+        Norms are loaded only if available in file.
 
         Parameters
         ----------

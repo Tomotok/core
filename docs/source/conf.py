@@ -47,6 +47,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
+    # 'sphinx.ext.napoleon',
     'numpydoc',
     # 'sphinx_markdown_builder',
 ]
@@ -95,6 +96,17 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = []
+
+# Definition of extension options
+# Autodoc
+autodoc_default_options = {
+    'members' : True,
+    'special-members' : '__call__',
+    }
+
+# numpydoc
+numpydoc_show_inherited_class_members = False
+numpydoc_class_members_toctree = False
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -292,7 +304,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'tomotok', 'tomotok Documentation',
-     author, 'tomotok', 'One line description of project.',
+     author, 'tomotok', 'Algorithms for tomography of tokamak plasma radiation.',
      'Miscellaneous'),
 ]
 
@@ -310,4 +322,7 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
+                       'numpy': ('https://numpy.org/doc/stable/', None),
+                       'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+                       'matplotlib': ('https://matplotlib.org/stable/', None)}

@@ -13,6 +13,14 @@ The application consist of menu widgets and after data were loaded, it can be us
 
 Widgets could be categorized according to they purpose. There are general purpose widgets that enhance the application, widgets for data visualisation and also widgets that apart from visualisation can also process the data. For description of the displaying and processing methods for multiple reconstructions see [G1]_.
 
+.. toctree::
+    :caption: Categories
+    :maxdepth: 1
+
+    apps
+    tomo
+    common
+
 .. rubric:: References
 
 .. [G1] J. Svoboda, et al. "Comparative analysis and new post-processing methods for plasma tomography at tokamaks." Journal of Instrumentation 14.11 (2019): C11001.

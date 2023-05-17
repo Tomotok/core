@@ -9,4 +9,7 @@ Implementation
 
 Convenience functions for computation return list of tuples holding a pair of sparse matrices.
 
-
+.. automodule:: tomotok.core.derivative
+    :members:
+    :show-inheritance:
+    :noindex:

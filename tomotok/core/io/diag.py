@@ -295,10 +295,11 @@ class Dsystem(object):
         bdr = np.loadtxt(str(bdr_path))
         return bdr
 
-    # TODO move to Pixgrid?
     def compute_bd_mat(self, grid, loc=None):
         """
         Simple generation of boundary matrix 1 inside rec area, 0 outside
+
+        .. deprecated:: 1.3.0
 
         Parameters
         ----------

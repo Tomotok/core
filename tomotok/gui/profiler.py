@@ -16,8 +16,7 @@ from .widgets_tomo import GraphRgb
 
 class GraphProfiler(GraphRgb):
     """
-    Based on GraphRgb class. Usefull for observing power profile in respect to
-    magentic flux surfaces.
+    A window that can calculate power profile in respect to magnetic flux surfaces.
     
     Parameters
     ----------
@@ -25,10 +24,7 @@ class GraphProfiler(GraphRgb):
         Default is None.
     data : dict
         Contains data, default is empty dict.
-    
-    Keywords
-    --------
-    title : str
+    title : str, optional
         Name of window.
     """
 

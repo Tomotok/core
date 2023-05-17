@@ -122,18 +122,13 @@ class GraphWindow(tk.Toplevel):
     ----------
     parent : TKInter widget
         Default is None. Used in GUI interface to specify hierarchy.
-    
-    Keywords
-    --------
-    vals : array-like
+    vals : array-like, optional
         Contains data from time vector to be shown in listbox and
         under slider.
-    
-    slices : int
+    slices : int, optional
         Number of time steps. Use ether vals or slices. Use if no time 
         vector data are available. Creates vals as range(slices).
-    
-    slavechbutton : bool
+    slavechbutton : bool, optional
         Switches whether slave check button will be created. If True a button
         is created, that if unchecked will switch off control from master.
     """

@@ -1,6 +1,13 @@
 Version 1.3 ()
 ==============
 
+Changes
+-------
+
+New Features
+------------
+ - added more methods for derivative matrix computation
+
 Fixes
 -----
  - keywords passing to BOB

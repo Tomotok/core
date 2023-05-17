@@ -115,7 +115,7 @@ def rot_v(points, angle):
         angle of rotation in radians
 
     Returns
-    --------
+    -------
     numpy.ndarray
         array of rotated points
     """
@@ -133,14 +133,14 @@ def rot_h(points, angle):
     Rotates given points in horizontal direction, that is about vertical axis z.
 
     Parameters
-    -----------
+    ----------
     points : numpy.ndarray 
         3D coordinates of points to be rotated with shape (#points, 3)
     angle : float
         angle of rotation in radians
 
     Returns
-    --------
+    -------
     numpy.ndarray
         array of rotated points
     """
