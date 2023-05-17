@@ -3,6 +3,7 @@ Version 1.3 ()
 
 Changes
 -------
+ - minor improvements of documentation structure
 
 New Features
 ------------
@@ -10,6 +11,7 @@ New Features
 
 Fixes
 -----
+ - step parameter name in geometry matrix generator for calcam
  - keywords passing to BOB
  - MFR accepts 1d signal
  - tomotok article citation info

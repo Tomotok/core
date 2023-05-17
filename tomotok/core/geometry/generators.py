@@ -73,7 +73,7 @@ def sparse_line_3d(rchord, vchord, grid, ychord=None, step=1e-3, rmin=None):
     return gmat.tocsr()
 
 
-def calcam_sparse_line_3d(pupil, dirs, grid, steps=1e-3, rmin=None, elong=1.):
+def calcam_sparse_line_3d(pupil, dirs, grid, step=1e-3, rmin=None, elong=1., steps=None):
     """
     Computes geometry matrix from calcam input using sparse_line_3d algorithm.
 
@@ -98,6 +98,9 @@ def calcam_sparse_line_3d(pupil, dirs, grid, steps=1e-3, rmin=None, elong=1.):
     -------
     sparse.csr_matrix
     """
+    if steps is not None:
+        warn('"steps" parameter was deprecated by "step"', DeprecationWarning)
+        step = steps
     if elong != 1.:
         dirs = elong * dirs
     dirs = dirs.reshape(-1, 3)
@@ -107,5 +110,5 @@ def calcam_sparse_line_3d(pupil, dirs, grid, steps=1e-3, rmin=None, elong=1.):
     ychords[:, 1] += dirs[:, 1]
     zchords = np.ones((dirs.shape[0], 2)) * pupil[2]
     zchords[:, 1] += dirs[:, 2]
-    gmat = sparse_line_3d(xchords, zchords, grid, ychords, steps, rmin)
+    gmat = sparse_line_3d(xchords, zchords, grid, ychords, step, rmin)
     return gmat
