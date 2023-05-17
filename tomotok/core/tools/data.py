@@ -38,9 +38,12 @@ class DataHandler(object):
         min_error : float, optional
             [description], by default 0
         """
-        self.chnls = data['chnl']
+        self.chnls = np.array(data['chnl'])
         self.time = data['time']
-        self.data = data['values']
+        if data['values'].shape == (self.time.size, self.chnls.size):
+            self.data = data['values']
+        else:
+            raise ValueError('Wrong shape of values {}. Expected {}'.format(data['values'].shape ,(self.time.size, self.chnls.size)))
         self._original = data.copy()
         self.errors = np.zeros_like(self.data) + min_error
         return
@@ -266,18 +269,17 @@ class DataHandler(object):
         tlim : tuple
             contains limits of requested time axis
         extend_num : int, optional
-            contains number of points outside tlim for filtering methods
-            (default value is calculated to fit chosen filtering method) <- should be determined by user
+            number of points outside tlim that are added to be used by filtering methods
         """
         if tlim[0] < self.time.min() or self.time.max() < tlim[1]:
-            raise ValueError('Requested time range out of data time vector.')
+            raise ValueError('Requested time range is out of data time vector.')
         t0 = np.searchsorted(self.time, tlim[0])
         t1 = np.searchsorted(self.time, tlim[0], side='right')
         if extend_num is None:
             self.data = self.data[t0:t1, :]
             self.errors = self.errors[t0:t1, :]
         else:
-            raise NotImplementedError('Extension of croping interval was not implemented.')
+            raise NotImplementedError('Extension of cropping interval was not implemented.')
             # FIXME make the method work with data attribute, remove return statement
             # TODO reconsider extend_num
             # ind_t0 = np.where(self.tvec >= tlim[0])[0][0]
