@@ -3,11 +3,16 @@ Tomography widgets
 
 Used for displaying or processing results [G1]_. 
 
-.. [G1] J. Svoboda, et al. "Comparative analysis and new post-processing methods for plasma tomography at tokamaks." Journal of Instrumentation 14.11 (2019): C11001.
-
 Displaying
 ----------
-A basic window capable of displaying a single reconstruction DiagGraphWindow. Can load a sequence of reconstructions and be synchronized with other windows.  
+A basic window capable of displaying a single reconstruction DiagGraphWindow. Can load a sequence of reconstructions and be synchronized with other windows. 
+
+.. automodule:: tomotok.gui.widgets_tomo
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :noindex:
+
 
 Processing
 ----------

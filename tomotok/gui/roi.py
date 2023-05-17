@@ -25,10 +25,7 @@ class GraphRectangles(GraphRgb):
         Default is None.
     data : dict
         Contains data, default is empty dict.
-    
-    Keywords
-    --------
-    title : str
+    title : str, optional
         Name of window.
     """
 
@@ -384,10 +381,7 @@ class GraphContours(GraphRgb):
         Default is None.
     data : dict
         Contains data, default is empty dict.
-    
-    Keywords
-    --------
-    title : str
+    title : str, optional
         Name of window.
     """
 
@@ -479,7 +473,7 @@ class GraphContours(GraphRgb):
         returns array with zero as minimum.
         
         Parameters
-        ---------
+        ----------
         pnum : int
             Number of patch
         

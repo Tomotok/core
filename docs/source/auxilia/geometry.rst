@@ -1,19 +1,19 @@
 Geometry
 ========
-takes care of creating artificial geometry and computation of geometry (sensitivity/contribution) matrices with single line of sight approximation.
+Handles geometry of the inversion task. This includes definition of reconstruction grid, creating artificial geometry and computation of geometry (sensitivity/contribution) matrices. Currently only algorithms using single line of sight approximation are implemented.
 
 Geometry matrix
 ---------------
 
-.. automodule :: tomotok.core.geometry.generators
+.. automodule:: tomotok.core.geometry.generators
     :members:
     :undoc-members:
     :noindex:
 
-Reconstruction grid
--------------------
+Reconstruction grids
+--------------------
 
-.. autoclass :: tomotok.core.geometry.RegularGrid
+.. autoclass:: tomotok.core.geometry.RegularGrid
     :members:
     :noindex:
 
@@ -21,6 +21,6 @@ Reconstruction grid
 Lines of sight
 --------------
 
-.. automodule :: tomotok.core.geometry.los
+.. automodule:: tomotok.core.geometry.los
     :members:
     :noindex:

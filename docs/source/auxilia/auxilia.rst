@@ -1,24 +1,22 @@
 Auxiliary functions
 ===================
 
-As the package is intended to focus on inversion methods rather than on providing robust and extensive synthetic diagnostic framework, the routines described below are implemented only for regular rectangular grids. These are the simplest and most widely used local basis functions for inversion on tokamaks.
+The Tomotok package is aiming to focus on inversion methods rather than on providing robust and extensive synthetic diagnostic framework. However, some convenience functions are implemented to make the ease data loading and manipulation, the routines interacting with reconstruction area are implemented only for regular rectangular grids. These are the simplest and most widely used local basis functions for inversion on tokamaks.
 
-Geometry
----------
-Handles geometry of the inversion task. This includes definition of reconstruction grid, creating artificial geometry and computation of geometry (sensitivity/contribution) matrices. Currently only algorithms using single line of sight approximation are implemented.
+Summary
+ - Geometry: reconstruction grid definition and geometry matrix computations...
+ - IO: classes for automatic database access and data preprocessing
+ - Derivative: calculation of derivative matrices on regular grid
+ - Phantoms: artificial data generators working with matrices inspired by structure of magnetic flux surfaces.
+ - Tools: general purpose functions like post processing methods, visualisations and analysis
 
-Database Access (IO)
---------------------
-This module contains classes for automatic database access and data preprocessing. The fundamental class is called Dsystem and describes geometry and database access for a given diagnostic system. This presents the basic set of functions that can be expanded by sub-classing. A subclass Tokamak that can handle loading and interpolating magnetic data in a format usual for tokamaks is implemented.
+.. toctree::
+    :caption: Categories of implemented functions
+    :maxdepth: 1
 
-Derivative
-----------
-Used in regularised inversion methods MFR and LAME. Various schemes for computation are used. Anisotropic derivatives can be computed using magnetics data.
+    geometry
+    io
+    derivative
+    phantoms
+    tools
 
-Phantoms
---------
-Artificial data generators working with matrices inspired by structure of magnetic flux surfaces.
-
-Tools
------
-Contains general purpose functions like post processing methods, visualisations and analysis.

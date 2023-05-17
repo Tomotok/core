@@ -210,10 +210,7 @@ class GraphRgb(GraphWindow):
         Default is None.
     data : dict
         Contains data, default is empty dict.
-    
-    Keywords
-    --------
-    title : str
+    title : str, optional
         Name of graph window. Is used for saving. Default is 'RGB plot'
     """
 
