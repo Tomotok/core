@@ -11,8 +11,9 @@ import numpy as np
 import scipy.sparse as sparse
 from scipy.sparse.linalg import spsolve
 
+from .mfr import Mfr, CholmodMfr
 
-class Fixt(object):
+class Fixt(Mfr):
     r"""
     Inverses provided data using fixed parameter value Minimum Fisher Regularization scheme.
 
@@ -37,15 +38,8 @@ class Fixt(object):
         self._gdg = None
         self._gdsig = None
 
-    @staticmethod
-    def solve(a, b):
-        r"""
-        Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using scipy.sparse.linalg.spsolve
-        """
-        return spsolve(a, b)
-
-    def invert(self, signals, gmat, derivatives, parameters, w_factor=None, mfi_num=3, w_max=1,
-               aniso=0):
+    def solve(self, signals, gmat, derivatives, parameters, derivative_weights=None, 
+              w_factor=None, mfi_num=3, w_max=1, zero_negative=False):
         """
         Inverses normalised signals using fixed value of regularisation parameter.
 
@@ -94,92 +88,31 @@ class Fixt(object):
         ela = time.time()
         self._signal = signals
         self._gmat = gmat
-        self._gdg = gmat.T.dot(gmat)
-        self._gdsig = gmat.T.dot(signals)
-        npix = gmat.shape[1]
-        g = np.ones(npix)
-        chis = []
+        self._gdg = gmat.T @ gmat
+        self._gdsig = gmat.T @ signals
+        g = np.ones(gmat.shape[1])
         mfi_counter = 0
+        chis = []
         while mfi_counter < mfi_num:
+            # MFI loop searching for ideal value of regularisation parameter
             w = 1 / g
             w[w < 0] = w_max
             w = sparse.diags(w)
             if w_factor is not None:
                 w = w * sparse.diags(w_factor)
-            objective = self.regularisation_matrix(derivatives, w, aniso)
+            if zero_negative:
+                g[g < 0] = 0
+            objective = self.regularisation_matrix(derivatives, w, derivative_weights)
             m = self._gdg + parameters[mfi_counter] * objective
-            g = self.solve(m, self._gdsig)
+            g = self.invert(m, self._gdsig)
+            chi_sq = self._pearson_test(g)
+            chis.append(chi_sq)
             mfi_counter += 1
-            last_chi = self._pearson_test(g)
-            chis.append(last_chi)
+        # logalpha = res.x
         ela = time.time() - ela
-        print('last chi^2 = {:.4f}, time: {:.2f} s'.format(last_chi, ela))
-        stats = dict(chi=chis, parameter=parameters)
+        stats = dict(chi=chis, logalpha=parameters, elapsed=ela)
         return g, stats
 
-    def smoothing_mat(self, w, derivatives, danis):
-        """
-        .. deprecated :: 1.1
-            Use :meth:`regularisation_matrix`  
-        """
-        warn('Smoothing_mat deprecated by regularisation_matrix method since v1.1.', DeprecationWarning)
-        self.regularisation_matrix(derivatives, w, danis)
-
-    def regularisation_matrix(self, derivatives, w, aniso=0):
-        """
-        Computes nonlinear regularisation matrix from provided derivative matrices and node weight factors 
-        determined by emissivity from previous iteration of the inversion loop.
-        
-        Anisotropic coefficients are computed using sigmoid function.
-
-        Multiple pairs of derivatives matrices computed by different numerical scheme can be used. Each pair should
-        contain derivatives in each locally orthogonal direction.
-
-        Parameters
-        ----------
-        w : scipy.sparse.dia.dia_matrix
-            (#nodes, #nodes) diagonal matrix with pixel weight factors
-        derivatives : list of scipy.sparse.csc_matrix pairs
-            contains sparse derivative matrices, each pair contains derivatives in both locally orthogonal coordinates
-        aniso : float
-            anistropic factor, positive values make derivatives along first coordinate more significant
-
-        Returns
-        -------
-        scipy.sparse.csc_matrix
-        """
-        # sigmoid function
-        w1 = 1 / (1 + np.exp(-aniso))
-        w2 = 1 / (1 + np.exp(aniso))
-        h1 = 0
-        h2 = 0
-        for pair in derivatives:
-            h1 = h1 + pair[0].T.dot(w).dot(pair[0])
-            h2 = h2 + pair[1].T.dot(w).dot(pair[1])
-        smooth = w1 * h1 + w2 * h2
-        return smooth
-
-    def _pearson_test(self, g):
-        r"""
-        Computes retrofit and residuum :math:`\chi^2` using pearson test
-
-        .. math ::
-            \chi^2 = \frac{1}{M} \sum_{i}^{M} \left(\tilde{\mathbf{f}} - \tilde{\mathbf{T}} \cdot \mathbf{g} \right)_i^2
-
-        Parameters
-        ----------
-        g : numpy.ndarray
-            vector of tested emissivity
-
-        Returns
-        -------
-        float
-        """
-        retrofit = self._gmat.dot(g)
-        misfit = retrofit - self._signal
-        misfit_sq = np.power(misfit, 2)
-        res = np.average(misfit_sq)
-        return res
 
     def __call__(self, data, gmat, derivatives, errors, parameters, **kwargs):
         """
@@ -261,7 +194,7 @@ class Fixt(object):
             signal_np = signal_nrm[i, :]
             error_sp = sparse.diags(1/errors[i, :])
             gmat_nrm = error_sp.dot(gmat)
-            res[i], stats = self.invert(signal_np, gmat_nrm, derivatives, parameters, **kwargs)
+            res[i], stats = self.solve(signal_np, gmat_nrm, derivatives, parameters, **kwargs)
             stats_list.append(stats)
 
         return res, stats_list
@@ -282,7 +215,7 @@ class CholmodFixt(Fixt):
         from sksparse.cholmod import cholesky
         self.cholesky = cholesky
 
-    def solve(self, a, b):
+    def invert(self, a, b):
         r"""
         Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using sksparse.cholmod.cholesky
 

@@ -90,6 +90,7 @@ def compute_aniso_dmats(grid, magflux, derivative=4, mask=None):
         bmat[i] = bmat[i] - spdiags(bmat[i].sum(axis=1).T, 0, npix, npix)
         ind = np.array(abs(bmat[i]).sum(axis=1).T == 0)
         corr = spdiags(ind, 0, npix, npix)*(br*dr+bz*dz) * spdiags(ind, 0, npix, npix)
+        # FIXME: remove 'correction'
         bmat[i] = bmat[i] + corr  # correction adds standard derivatives, probably not necessary
     bmat = [(bmat[0], bmat[1]), (bmat[2], bmat[3])]
     dmats_red = reduce_dmats(bmat, mask.flatten())
@@ -512,3 +513,6 @@ def get_index_shift(col_num: int, direction: str, distance: int = 1) -> int:
     elif direction == 'bottom-right':
         shift = distance * (1 - col_num)
     return shift
+
+
+# make a function to load a json file

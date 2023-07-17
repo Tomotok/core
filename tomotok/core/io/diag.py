@@ -188,7 +188,7 @@ class Dsystem(object):
         xchords, ychords : numpy.ndarray
             arrays with coordinates of chord points with shape (#chords, #points)
         """
-        warnings.warn('Support for LoS saving to txt will be removed. Transfer your coordinates to hdf.', FutureWarning)
+        warnings.warn('Support for LoS saving to txt will be removed. Transfer your coordinates to hdf or json.', FutureWarning)
         geometry_path = self.geometry_path
         ychords = np.zeros((0, 0))
         xchords = np.zeros((0, 0))

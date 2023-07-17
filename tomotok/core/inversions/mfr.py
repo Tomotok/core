@@ -20,18 +20,6 @@ from scipy.optimize import minimize_scalar
 class Mfr(object):
     r"""
     Inverses provided data using Minimum Fisher Regularization scheme.
-
-    Attributes
-    ----------
-    logalpha : float
-        :math:`\log(\alpha)` logarithm of regularisation parameter
-    gmat : numpy.ndarray
-        geometry matrix with shape (#channels, #nodes)
-    signal : numpy.ndarray
-    gdg : numpy.ndarray
-       :math:`\mathbf{T}^T \cdot \mathbf{T}` symmetrised geometry matrix, shape (#nodes, #nodes)
-    gdsig : numpy.ndarray
-        right side of regularisation scheme :math:`\mathbf{T}^T \cdot \mathbf{f}`
     """
     def __init__(self):
         super().__init__()
@@ -41,7 +29,7 @@ class Mfr(object):
         self._gdsig = None
 
     @staticmethod
-    def solve(a, b):
+    def invert(a, b):
         r"""
         Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using scipy.sparse.linalg.spsolve
         """
@@ -70,15 +58,15 @@ class Mfr(object):
         """
         alpha = 10 ** logalpha
         mod_mat = self._gdg + alpha * objective
-        g = self.solve(mod_mat, self._gdsig)
+        g = self.invert(mod_mat, self._gdsig)
         chi2 = self._pearson_test(g)
         return abs(chi2 - 1)
 
-    def invert(self, signals, gmat, derivatives, w_factor=None, mfi_num=3, bounds=(-15, 0), iter_max=15, w_max=1,
-               aniso=0, tolerance=0.05, zero_negative=False):
+    def solve(self, signals, gmat, derivatives, derivative_weights=None, w_factor=None, mfi_num=3, bounds=(-15, 0), iter_max=15, w_max=1,
+              tolerance=0.05, zero_negative=False):
         """
-        Inverses normalised signals using `mfi_num` Fisher Information cycles each with 
-        `iter_max` steps of regularisation parameter optimisation.
+        Solves the tomography problem for given normalised signals using 'mfi_num' Fisher Information cycles
+        each with 'iter_max' steps of regularisation parameter optimisation.
 
         See regularisation_matrix documentation for more information about derivative matrix formats.
 
@@ -89,7 +77,9 @@ class Mfr(object):
         gmat : scipy.sparse.csr_matrix
             geometry matrix normalised by estimated errors, shape (#channels, #nodes)
         derivatives : list
-            list of tuples containing pairs of sparse derivatives matrices
+            list of sparse derivative matrices used to create regularisation matrix
+        derivative_weights : list of float
+            list of weights for individual derivative matrices
         w_factor : numpy.ndarray, optional
             weight matrix multipliers with shape (#nodes, )
         mfi_num : float, optional
@@ -146,7 +136,7 @@ class Mfr(object):
             regularisation, stats = self.determine_regularisation(
                 derivatives,
                 w,
-                aniso,
+                derivative_weights,
                 bounds,
                 iter_max,
                 tolerance
@@ -154,22 +144,21 @@ class Mfr(object):
             iter_nums.append(stats['iter_num'])
             alphas.append(stats['logalpha'])
             m = self._gdg + regularisation
-            g = self.solve(m, self._gdsig)
+            g = self.invert(m, self._gdsig)
             chi_sq = self._pearson_test(g)
             chis.append(chi_sq)
             mfi_count += 1
         # logalpha = res.x
         ela = time.time() - ela
-        print('last chi^2 = {:.4f}, time: {:.2f} s'.format(chis[-1], ela))
-        stats = dict(chi=chis, logalpha=alphas, iter_num=iter_nums)
+        stats = dict(chi=chis, logalpha=alphas, iter_num=iter_nums, elapsed=ela)
         return g, stats
 
-    def determine_regularisation(self, derivatives, w, aniso, bounds, iter_max, tolerance):
+    def determine_regularisation(self, derivatives, w, derivative_weights, bounds, iter_max, tolerance):
         """
         Uses minimize scalar function from scipy to iteratively minimize chi square (Pearson test).
         """
         stats = dict()
-        objective = self.regularisation_matrix(derivatives, w, aniso)
+        objective = self.regularisation_matrix(derivatives, w, derivative_weights)
         # TODO write custom optimisation routine to avoid recalculating optimal solution to get chi sq
         res = minimize_scalar(
             self._test_regularization,
@@ -185,47 +174,38 @@ class Mfr(object):
         regularisation = 10**res.x * objective
         return regularisation, stats
 
-    def smoothing_mat(self, w, derivatives, danis):
-        """
-        .. deprecated :: 1.1
-            Use :meth:`regularisation_matrix`  
-        """
-        warn('Smoothing_mat deprecated by regularisation_matrix method since v1.1.', DeprecationWarning)
-        self.regularisation_matrix(derivatives, w, danis)
-
-    def regularisation_matrix(self, derivatives, w, aniso=0):
+    def regularisation_matrix(self, derivatives, weights, derivative_weights=None):
         """
         Computes nonlinear regularisation matrix from provided derivative matrices and node weight factors 
         determined by emissivity from previous iteration of the inversion loop.
         
-        Anisotropic coefficients are computed using sigmoid function.
-
-        Multiple pairs of derivatives matrices computed by different numerical scheme can be used. Each pair should
-        contain derivatives in each locally orthogonal direction.
+        Multiple derivative matrices can be used allowing to combine matrices computed by 
+        different numerical schemes. 
+        
+        Each matrix can have different weight assigned to introduce anisotropy.
 
         Parameters
         ----------
-        w : scipy.sparse.dia.dia_matrix
-            (#nodes, #nodes) diagonal matrix with pixel weight factors
-        derivatives : list of scipy.sparse.csc_matrix pairs
-            contains sparse derivative matrices, each pair contains derivatives in both locally orthogonal coordinates
-        aniso : float
-            anistropic factor, positive values make derivatives along first coordinate more significant
+        derivatives : list of scipy sparse matrix
+            a list of derivative matrices, with shape (# nodes, # nodes) 
+        weights : scipy.sparse.dia_matrix
+            node weight factors, (#nodes, #nodes) 
+        weight_coefficients : list of float
+            allows to specify anisotropy by assign weights for each matrix
 
         Returns
         -------
         scipy.sparse.csc_matrix
         """
-        # sigmoid function
-        w1 = 1 / (1 + np.exp(-aniso))
-        w2 = 1 / (1 + np.exp(aniso))
-        h1 = 0
-        h2 = 0
-        for pair in derivatives:
-            h1 = h1 + pair[0].T.dot(w).dot(pair[0])
-            h2 = h2 + pair[1].T.dot(w).dot(pair[1])
-        smooth = w1 * h1 + w2 * h2
-        return smooth
+        if isinstance(derivatives, sparse.spmatrix):
+            derivatives = [derivatives]
+        if derivative_weights is None:
+            derivative_weights = [1] * len(derivatives)
+        total = sum(derivative_weights)
+        regularisation = sparse.csr_matrix(derivatives[0].shape)
+        for dw, dmat in zip(derivative_weights, derivatives):
+            regularisation += dw / total * dmat.T @ weights @ dmat
+        return regularisation
 
     def _pearson_test(self, g):
         r"""
@@ -265,25 +245,19 @@ class Mfr(object):
         errors : int, float or np.ndarray
             Can have shapes (#channels, ), (#time slices,) or (#time slices, #channels)
         **kwargs : dict
-            keywords passed to invert method
+            keywords passed to solve method
         
         Returns
         -------
         res : numpy.ndarray
             tomographic reconstruction, with shape (#time slices, #nodes)
         stats_list : list of dicts
-            contains dicts with inversion statistics returned by invert method
+            contains dicts with inversion statistics returned by solve method
         
         See also
         --------
-        invert
+        solve
         """
-        try:
-            kwargs['aniso'] = kwargs.pop('danis')
-            warn('Parameter `danis` renamed to `aniso` since v1.1', DeprecationWarning)
-        except KeyError:
-            pass
-
         data_ndim = np.ndim(data)
         if data_ndim == 0:
             raise ValueError('Data must be at least an 1D array of values.')
@@ -327,7 +301,7 @@ class Mfr(object):
             signal_np = signal_nrm[i, :]
             error_sp = sparse.diags(1/errors[i, :])
             gmat_nrm = error_sp.dot(gmat)
-            res[i], stats = self.invert(signal_np, gmat_nrm, derivatives, **kwargs)
+            res[i], stats = self.solve(signal_np, gmat_nrm, derivatives, **kwargs)
             stats_list.append(stats)
 
         return res, stats_list
@@ -348,7 +322,7 @@ class CholmodMfr(Mfr):
         from sksparse.cholmod import cholesky
         self.cholesky = cholesky
 
-    def solve(self, a, b):
+    def invert(self, a, b):
         r"""
         Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using sksparse.cholmod.cholesky
 
