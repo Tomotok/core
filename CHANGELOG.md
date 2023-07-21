@@ -1,5 +1,5 @@
-Version 1.3 ()
-==============
+Version 1.3 (21.7.2023)
+=======================
 
 Changes
 -------
@@ -8,6 +8,7 @@ Changes
 New Features
 ------------
  - added more methods for derivative matrix computation
+ - added new geometry matrix generator for start and end points
 
 Fixes
 -----
