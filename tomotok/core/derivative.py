@@ -10,6 +10,8 @@ Contains functions for derivative matrix computation.
  - prepare_mag_data is an auxiliary function to calculate magnetic flux gradients and
  - px_norm is a simple auxiliary function to calculate norms for coefficients
 """
+from warnings import warn
+
 import numpy as np
 from scipy import sparse
 from scipy.sparse import spdiags, eye
@@ -17,9 +19,11 @@ from scipy.sparse import spdiags, eye
 from .geometry import RegularGrid
 
 
-def compute_iso_dmats(grid, derivatives=[1, 2], mask=None):
+def compute_iso_dmats(grid, derivatives=[1, 2], mask=None, compensate_edges=False):
     """
     Computes isotropic derivative matrix pairs for given differential schemes.
+
+    .. deprecated :: 2.0
 
     Parameters
     ----------
@@ -31,24 +35,24 @@ def compute_iso_dmats(grid, derivatives=[1, 2], mask=None):
     -------
     list of dmat pairs
     """
+    warn("compute_iso_dmats is deprecated, use derivative_matrix instead", DeprecationWarning)
     if mask is None:
-        mask = np.ones(grid.size, dtype=np.bool)
+        mask = np.ones(grid.size, dtype=bool)
     if isinstance(derivatives, int):
         derivatives = [derivatives]
     dmats = []
     for d in derivatives:
         dmats.append(generate_iso_dmat(grid, derivative=d))
-    dmats_red = reduce_dmats(dmats, mask.flatten())
-    # dmats_dict = dict()
-    # for t in tvec:
-    #     dmats_dict[t] = dmats_red
+    dmats_red = reduce_dmats(dmats, mask.flatten(), compensate_edges)
     return dmats_red
 
-def compute_aniso_dmats(grid, magflux, derivative=4, mask=None):
-    # TODO change smoothing type to string
+
+def compute_aniso_dmats(grid, magflux, derivative=4, mask=None, compensate_edges=False):
     """
     Prepares matrix of finite differences, magnetic configuration dependent or
     fixed simple differences. First or second derivative can be used
+
+    .. deprecated :: 2.0
 
     Parameters
     ----------
@@ -66,12 +70,7 @@ def compute_aniso_dmats(grid, magflux, derivative=4, mask=None):
     tuple of scipy.sparse.csrmatrix pairs
         derivative matrix
     """
-    # tidx = np.searchsorted(self.magfield['time'], self.tvec)
-    # for t in self.tvec:
-    #     tidx = np.searchsorted(self.magfield['time'], t)
-    #     mf = self.magfield['values'][tidx, :]
-    # dmats = compute_aniso_dmats(self.grid, smoothing=1, magflux=mf)
-
+    warn("compute_aniso_dmats is deprecated, use anisotropic_derivative_matrices instead", DeprecationWarning)
     if mask is None:
         mask = np.ones(grid.size, dtype=np.bool)
     dr = grid.dr
@@ -93,7 +92,7 @@ def compute_aniso_dmats(grid, magflux, derivative=4, mask=None):
         # FIXME: remove 'correction'
         bmat[i] = bmat[i] + corr  # correction adds standard derivatives, probably not necessary
     bmat = [(bmat[0], bmat[1]), (bmat[2], bmat[3])]
-    dmats_red = reduce_dmats(bmat, mask.flatten())
+    dmats_red = reduce_dmats(bmat, mask.flatten(), compensate_edges)
     return dmats_red
 
 
@@ -122,6 +121,7 @@ def px_norm(direc):
     """
     Computed (normalised?) distance between centers of nodes.
     """
+    # FIXME: assumes square grid
     dn = np.sqrt(2)
     mod = np.asarray([s % 2 for s in direc])
     norms = np.zeros(np.shape(direc))
@@ -131,7 +131,6 @@ def px_norm(direc):
 
 
 def generate_anizo_matrix(grid, atan2, derivative):
-    # TODO: finish docstrings
     """
     Write prepared directions atan2 into the derivative matrix.
     Main magic of this algorithm. Rewrite arctan into the directions
@@ -180,8 +179,8 @@ def generate_anizo_matrix(grid, atan2, derivative):
         direction = np.int_(np.mod(np.floor(atan2 / (np.pi/4) + k), 8))
 
         # array of reference indices
-        dir_ = np.array((-1, 2, 3, 4, 1, -2, -3, -4), dtype=np.int)  # F like
-        # dir_ = np.array((-3, -2, 1, 4, 3, 2, -1, -4), dtype=np.int)  # C like
+        dir_ = np.array((-1, 2, 3, 4, 1, -2, -3, -4), dtype=int)  # F like
+        # dir_ = np.array((-3, -2, 1, 4, 3, 2, -1, -4), dtype=int)  # C like
         # C  [-4, -3, -2]       F  [-4, -1,  2]
         #    [-1,  0,  1]          [-3,  0,  3]
         #    [ 2,  3,  4]          [-2,  1,  4]
@@ -260,10 +259,11 @@ def generate_anizo_matrix(grid, atan2, derivative):
     return bpar, bper, bpar_tmp, bper_tmp
 
 
-# TODO default value for derivative, change type from int to str
 def generate_iso_dmat(grid: RegularGrid, derivative=4):
     """
     Computes isotropic derivative matrix.
+
+    .. deprecated ::
 
     Parameters
     ----------
@@ -274,6 +274,7 @@ def generate_iso_dmat(grid: RegularGrid, derivative=4):
     -------
     scipy.sparse.csc_matrix, scipy.sparse.csc_matrix
     """
+    warn("This function is deprecated, use derivative_matrix instead", DeprecationWarning)
     npix = grid.size
     nx = grid.nr
     # diagonal
@@ -304,7 +305,7 @@ def generate_iso_dmat(grid: RegularGrid, derivative=4):
     return br, bz
 
 
-def reduce_dmats(dmats, idx):
+def reduce_dmats(dmats, idx, compensate_edges=False):
     """
     Creates reduced derivative matrices by cutting out rows and columns representing unwanted nodes.
 
@@ -324,6 +325,13 @@ def reduce_dmats(dmats, idx):
     for pair in dmats:
         s1 = pair[0][idx, :][:, idx]
         s2 = pair[1][idx, :][:, idx]
+        if compensate_edges:
+            row_sum1 = np.array(s1.sum(1)).flatten()
+            row_sum_diag = sparse.diags([row_sum1], [0], format='csr')
+            s1 = s1 - row_sum_diag
+            row_sum2 = np.array(s2.sum(1)).flatten()
+            row_sum_diag = sparse.diags([row_sum2], [0], format='csr')
+            s2 = s2 - row_sum_diag
         pair_red = (s1, s2)
         dmats_red.append(pair_red)
     return dmats_red
@@ -416,6 +424,10 @@ def derivative_matrix(grid: RegularGrid, direction: str, scheme: str = 'forward'
     dmat = dmat / step
 
     if mask is not None:
+        if mask.ndim == 2:
+            mask = mask.flatten()
+        elif mask.ndim > 2:
+            raise ValueError('Mask must be 1D or 2D array.')
         dmat = dmat[mask, :][:, mask]
     if compensate_edges:
         row_sum = np.array(dmat.sum(1)).flatten()
@@ -425,7 +437,7 @@ def derivative_matrix(grid: RegularGrid, direction: str, scheme: str = 'forward'
     return dmat
 
 
-def laplace_matrix(grid: RegularGrid, mask=None, compensate_edge=False, diagonals=True):
+def laplace_matrix(grid: RegularGrid, mask=None, compensate_edges=False, diagonals=True):
     """
     Creates sparse laplace matrix.
 
@@ -466,9 +478,13 @@ def laplace_matrix(grid: RegularGrid, mask=None, compensate_edge=False, diagonal
         lmat -= 4 / diagonal_distance * center
 
     if mask is not None:
+        if mask.ndim == 2:
+            mask = mask.flatten()
+        elif mask.ndim > 2:
+            raise ValueError('Mask must be 1D or 2D array.')
         lmat = lmat[mask, :][:, mask]
 
-    if compensate_edge:
+    if compensate_edges:
         row_sum = np.array(lmat.sum(1)).flatten()
         row_sum = sparse.diags([row_sum], [0], format='csr')
         lmat = lmat - row_sum
@@ -515,4 +531,47 @@ def get_index_shift(col_num: int, direction: str, distance: int = 1) -> int:
     return shift
 
 
-# make a function to load a json file
+def anisotropic_derivative_matrices(grid: RegularGrid, magnetic_flux, mask=None, compensate_edges=False):
+    """
+    Computes anisotropic derivative matrices.
+
+    Uses forward and backward derivative schemes for both parallel and perpendicular directions.
+
+    Parameters
+    ----------
+    grid : RegularGrid
+        A reconstruction grid
+    magnetic_flux : numpy.ndarray
+        values of psi normalized interpolated to grid
+    mask : numpy.ndarray, optional
+        bool mask
+    compensate_edges : bool, optional
+        if True, subtracts row sum from diagonal, by default False
+
+    Returns
+    -------
+    list of scipy.sparse.csrmatrix
+        list of anistropic derivative matrices
+        [parallel forward, perpendicular forward, parallel backward, perpendicular backward]
+    """
+    vgrad = np.gradient(magnetic_flux[:, :])
+    atan2 = np.arctan2(vgrad[1], -vgrad[0])
+    bpar1, bper1, foo, bar = generate_anizo_matrix(grid, atan2, 1)  # forward
+    bpar2, bper2, foo, bar = generate_anizo_matrix(grid, atan2, 2)  # backward
+
+    dmat_list = [bpar1, bper1, bpar2, bper2]
+    
+    for i, dmat in enumerate(dmat_list):
+        if mask is not None:
+            if mask.ndim == 2:
+                mask = mask.flatten()
+            elif mask.ndim > 2:
+                raise ValueError('Mask must be 1D or 2D array.')
+            dmat = dmat[mask, :][:, mask]
+        if compensate_edges:
+            row_sum = np.array(dmat.sum(1)).flatten()
+            row_sum = sparse.diags([row_sum], [0], format='csr')
+            dmat = dmat - row_sum
+        dmat_list[i] = dmat
+
+    return dmat_list
