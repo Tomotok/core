@@ -345,3 +345,23 @@ class CholmodMfr(Mfr):
         """
         factor = self.cholesky(a)
         return factor(b)
+
+
+class JaxedMfr(Mfr):
+    """
+    Uses jax to solve the parameter optimisation task in MFI loop.
+    Requires jax to be installed in order to initialize properly.
+
+    Uses jax.numpy.linalg.solve to solve the regularised task in parameter optimisation.
+    """
+    def __init__(self):
+        """
+        Executes standard initialization and imports jax.numpy.linalg.solve
+        """
+        super().__init__()
+        import jax.numpy.linalg as jax_linalg
+        self.jax_solve = jax_linalg.solve
+
+    def invert(self, a, b):
+        x = self.jax_solve(a, b)
+        return np.copy(x)

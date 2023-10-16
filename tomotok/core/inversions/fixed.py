@@ -232,3 +232,33 @@ class CholmodFixt(Fixt):
         """
         factor = self.cholesky(a)
         return factor(b)
+
+
+class JaxedFixt(Fixt):
+    """
+    Jax version of fixed parameter MFR
+    Requires jax to be installed in order to initialize properly.
+
+    Uses jax.numpy.linalg.solve to solve the inversion problem
+    """
+    def __init__(self):
+        """
+        Executes standard initialization and imports jax.numpy.linalg.solve
+        """
+        super().__init__()
+        from jax.numpy.linalg import solve as jax_solve
+        self.jax_solve = jax_solve
+
+    def invert(self, a, b):
+        r"""
+        Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using jax.numpy.linalg.solve
+
+        Parameters
+        ----------
+        a : scipy.sparse.csr_matrix
+            square and positive definite matrix
+        b : array_like
+            right hand side vector
+        """
+        x = self.jax_solve(a, b)
+        return np.copy(x)
