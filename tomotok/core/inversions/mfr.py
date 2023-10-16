@@ -62,8 +62,11 @@ class Mfr(object):
         chi2 = self._pearson_test(g)
         return abs(chi2 - 1)
 
-    def solve(self, signals, gmat, derivatives, derivative_weights=None, w_factor=None, mfi_num=3, bounds=(-15, 0), iter_max=15, w_max=1,
-              tolerance=0.05, zero_negative=False):
+    # TODO: unified interface with determine_regularisation arguments and keywords as parameters
+    def solve(
+        self, signals, gmat, derivatives, derivative_weights=None, w_factor=None, w_max=1e5,
+        mfi_num=3, bounds=(-15, 0), iter_max=15, tolerance=0.05, zero_negative=False, initial_guess=None,
+    ):
         """
         Solves the tomography problem for given normalised signals using 'mfi_num' Fisher Information cycles
         each with 'iter_max' steps of regularisation parameter optimisation.
@@ -119,15 +122,21 @@ class Mfr(object):
         self._gmat = gmat
         self._gdg = gmat.T @ gmat
         self._gdsig = gmat.T @ signals
-        g = np.ones(gmat.shape[1])
-        mfi_count = 0
+        if initial_guess is None:
+            g = np.ones(gmat.shape[1])
+        else:
+            g = initial_guess
+        counter = 0
+        # TODO: return list of stats dicts rather than dict with a list for each key
         iter_nums = []
         alphas = []
         chis = []
-        while mfi_count < mfi_num:
+        while counter < mfi_num:
             # MFI loop searching for ideal value of regularisation parameter
-            w = 1 / g
-            w[w < 0] = w_max
+            w = np.ones(g.shape)
+            w[g <= 0] = w_max
+            w[g > 0] = 1 / g[g > 0]
+            # w[g <= 0] = w_max
             w = sparse.diags(w)
             if w_factor is not None:
                 w = w * sparse.diags(w_factor)
@@ -147,7 +156,7 @@ class Mfr(object):
             g = self.invert(m, self._gdsig)
             chi_sq = self._pearson_test(g)
             chis.append(chi_sq)
-            mfi_count += 1
+            counter += 1
         # logalpha = res.x
         ela = time.time() - ela
         stats = dict(chi=chis, logalpha=alphas, iter_num=iter_nums, elapsed=ela)
@@ -223,12 +232,13 @@ class Mfr(object):
         -------
         float
         """
-        retrofit = self._gmat.dot(g)
+        retrofit = self._gmat @ g
         misfit = retrofit - self._signal
         misfit_sq = np.power(misfit, 2)
         self._chisq = np.average(misfit_sq)
         return self._chisq
 
+    # TODO: instead of sequence handling change to input processing for solve, class specific
     def __call__(self, data, gmat, derivatives, errors, **kwargs):
         """
         Normalises signal and geometry matrix using estimated errors of measurement and

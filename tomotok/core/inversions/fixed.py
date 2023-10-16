@@ -39,7 +39,7 @@ class Fixt(Mfr):
         self._gdsig = None
 
     def solve(self, signals, gmat, derivatives, parameters, derivative_weights=None, 
-              w_factor=None, mfi_num=3, w_max=1, zero_negative=False):
+              w_factor=None, mfi_num=3, w_max=1e5, zero_negative=False, initial_guess=None):
         """
         Inverses normalised signals using fixed value of regularisation parameter.
 
@@ -90,13 +90,17 @@ class Fixt(Mfr):
         self._gmat = gmat
         self._gdg = gmat.T @ gmat
         self._gdsig = gmat.T @ signals
-        g = np.ones(gmat.shape[1])
+        if initial_guess is None:
+            g = np.ones(gmat.shape[1])
+        else:
+            g = initial_guess
         mfi_counter = 0
         chis = []
         while mfi_counter < mfi_num:
-            # MFI loop searching for ideal value of regularisation parameter
+             # MFI loop searching for ideal value of regularisation parameter
+            g[g <= 0] = 1 / w_max
             w = 1 / g
-            w[w < 0] = w_max
+            # w[g <= 0] = w_max
             w = sparse.diags(w)
             if w_factor is not None:
                 w = w * sparse.diags(w_factor)
