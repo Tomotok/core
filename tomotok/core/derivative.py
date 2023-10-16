@@ -404,6 +404,8 @@ def derivative_matrix(grid: RegularGrid, direction: str, scheme: str = 'forward'
         following = lower_right
         previous = upper_left
         step = (grid.dr*2 + grid.dz**2)**0.5
+    else:
+        raise ValueError(f'Unknown direction {direction}.')
 
     if scheme == 'forward':
         dmat = following - center

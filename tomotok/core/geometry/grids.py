@@ -198,7 +198,7 @@ class RegularGrid(object):
         corners = np.empty((*self.shape, 4, 2))
         # top left
         tl = np.meshgrid(self.r_border[:-1], self.z_border[1:])
-        # top rigth
+        # top right
         tr = np.meshgrid(self.r_border[1:], self.z_border[1:])
         # bottom right
         br = np.meshgrid(self.r_border[1:], self.z_border[:-1])
