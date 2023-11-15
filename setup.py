@@ -1,5 +1,5 @@
 import os.path as path
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -19,9 +19,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/tomotok/core',
-    packages=find_packages(),
-    namespace_packages=['tomotok'],
-    include_package_data=True,
+    packages=find_namespace_packages(include=['tomotok.*']),
     python_requires='>=3.5',
     install_requires=['numpy>=1.13.3', 'scipy>=1.1.0', 'matplotlib>=2.2.2', 'h5py>=2.7.1'],
 )
