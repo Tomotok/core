@@ -4,12 +4,14 @@
 """
 Simple hdf saving and loading functions
 """
+from pathlib import Path
+from typing import Union
 from warnings import warn
 
 import h5py
 
 
-def to_hdf(dct, floc, attrs={}):
+def to_hdf(dct: dict, floc: Union[str, Path], attrs: dict = {}, auto_rename=True) -> None:
     """
     Saves provided dict into a hdf file
 
@@ -17,12 +19,20 @@ def to_hdf(dct, floc, attrs={}):
     ----------
     dct : dict
         [description]
-    floc : str
+    floc : str or pathlib.Path
         path to file with name
     attrs : dict
         metadata to be saved to attributes
     """
-    warn('Support for dense geometry matrices will be removed in the future.', FutureWarning)
+    floc = Path(floc)
+    floc = floc.expanduser()
+    if floc.exists():
+        if auto_rename:
+            new = floc.parent / f'{floc.stem}_1{floc.suffix}'
+            warn(f'File {floc} already exists. Renaming to {new}')
+            floc = new
+        else:
+            raise FileExistsError(f'File {floc} already exists.')
     with h5py.File(floc, 'w') as fl:
         for key in dct:
             fl.create_dataset(str(key), data=dct[key])
@@ -32,8 +42,23 @@ def to_hdf(dct, floc, attrs={}):
     return
 
 
-def from_hdf(floc):
+def from_hdf(floc: Union[str, Path]) -> dict:
+    """
+    Loads all datasets from hdf file to dict
+
+    Parameters
+    ----------
+    floc : str or pathlib.Path
+        path to file with name
+
+    Returns
+    -------
+    dict
+        holds all datasets from hdf file
+    """
     dct = {}
+    floc = Path(floc)
+    floc = floc.expanduser()
     with h5py.File(floc, 'r') as fl:
         for key in fl.keys():
             dct[key] = fl[key][:]
