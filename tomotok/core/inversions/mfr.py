@@ -9,10 +9,13 @@ Minimum Fisher Regularisation implemented based on articles by M. Anton and J. M
 .. [MFR2] J. Mlynar et al., "Current research into applications of tomography for fusion diagnostics." J. Fusion Energy 38.3 (2019): 458-466
 """
 import time
+from typing import Union
 from warnings import warn
 
 import numpy as np
 import scipy.sparse as sparse
+from numpy.typing import ArrayLike
+from scipy.sparse import spmatrix
 from scipy.sparse.linalg import spsolve
 from scipy.optimize import minimize_scalar
 
@@ -119,11 +122,9 @@ class Mfr(object):
         --------
         regularisation_matrix
         """
+        # TODO: make errors optional
         ela = time.time()
-        self._signal = signals
-        self._gmat = gmat
-        self._gdg = gmat.T @ gmat
-        self._gdsig = gmat.T @ signals
+        self._make_cache(signals, gmat)
         if initial_guess is None:
             g = np.ones(gmat.shape[1])
         else:
@@ -164,6 +165,12 @@ class Mfr(object):
         stats = dict(chi=chis, logalpha=alphas, iter_num=iter_nums, elapsed=ela)
         return g, stats
 
+    def _make_cache(self, signals: ArrayLike, gmat: Union[ArrayLike, spmatrix]) -> None:
+        self._signal = signals
+        self._gmat = gmat
+        self._gdg = gmat.T @ gmat
+        self._gdsig = gmat.T @ signals
+
     def determine_regularisation(self, derivatives, w, derivative_weights, bounds, iter_max, tolerance):
         """
         Uses minimize scalar function from scipy to iteratively minimize chi square (Pearson test).
@@ -171,6 +178,7 @@ class Mfr(object):
         stats = dict()
         objective = self.regularisation_matrix(derivatives, w, derivative_weights)
         # TODO write custom optimisation routine to avoid recalculating optimal solution to get chi sq
+        # TODO pass gmat and signal as args?
         res = minimize_scalar(
             self._test_regularization,
             method='bounded',
@@ -351,20 +359,3 @@ class CholmodMfr(Mfr):
 
 class JaxedMfr(Jaxed, Mfr):
     pass
-    # """
-    # Uses jax to solve the parameter optimisation task in MFI loop.
-    # Requires jax to be installed in order to initialize properly.
-
-    # Uses jax.numpy.linalg.solve to solve the regularised task in parameter optimisation.
-    # """
-    # def __init__(self):
-    #     """
-    #     Executes standard initialization and imports jax.numpy.linalg.solve
-    #     """
-    #     super().__init__()
-    #     import jax.numpy.linalg as jax_linalg
-    #     self.jax_solve = jax_linalg.solve
-
-    # def invert(self, a, b):
-    #     x = self.jax_solve(a, b)
-    #     return np.copy(x)

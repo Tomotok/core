@@ -88,10 +88,7 @@ class Fixt(Mfr):
             msg = 'Different number of regularisation parameters: {} and MFI loops: {}.'
             raise ValueError(msg.format(len(parameters), mfi_num))
         ela = time.time()
-        self._signal = signals
-        self._gmat = gmat
-        self._gdg = gmat.T @ gmat
-        self._gdsig = gmat.T @ signals
+        self._make_cache(signals, gmat)
         if initial_guess is None:
             g = np.ones(gmat.shape[1])
         else:
