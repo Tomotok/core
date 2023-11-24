@@ -15,8 +15,7 @@ from warnings import warn
 import numpy as np
 import scipy.sparse as sparse
 from numpy.typing import ArrayLike
-from scipy.sparse import spmatrix
-from scipy.sparse.linalg import spsolve
+from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize_scalar
 
 from .jax import Jaxed
@@ -38,7 +37,10 @@ class Mfr(object):
         r"""
         Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using scipy.sparse.linalg.spsolve
         """
-        return spsolve(a, b)
+        if isinstance(a, sparse.spmatrix):
+            a = a.toarray()
+        factor = cho_factor(a)
+        return cho_solve(factor, b)
 
     def _test_regularization(self, logalpha, objective):
         """
@@ -165,7 +167,7 @@ class Mfr(object):
         stats = dict(chi=chis, logalpha=alphas, iter_num=iter_nums, elapsed=ela)
         return g, stats
 
-    def _make_cache(self, signals: ArrayLike, gmat: Union[ArrayLike, spmatrix]) -> None:
+    def _make_cache(self, signals: ArrayLike, gmat: Union[ArrayLike, sparse.spmatrix]) -> None:
         self._signal = signals
         self._gmat = gmat
         self._gdg = gmat.T @ gmat
@@ -319,8 +321,8 @@ class Mfr(object):
 
         for i in range(nslices):
             signal_np = signal_nrm[i, :]
-            error_sp = sparse.diags(1/errors[i, :])
-            gmat_nrm = error_sp.dot(gmat)
+            norms = sparse.diags(1/errors[i, :])
+            gmat_nrm = norms @ gmat
             res[i], stats = self.solve(signal_np, gmat_nrm, derivatives, **kwargs)
             stats_list.append(stats)
 
