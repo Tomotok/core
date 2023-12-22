@@ -385,7 +385,7 @@ class GraphRgb(GraphWindow):
             Contains indexes of nearest tim vector values
             to reference diagnostic.
         """
-        out = np.zeros(3, dtype=np.int)
+        out = np.zeros(3, dtype=int)
         out[0] = np.argmin(np.abs(self.tvecs['bol'] - self.vals[val]))
         out[1] = np.argmin(np.abs(self.tvecs['ntr'] - self.vals[val]))
         out[2] = np.argmin(np.abs(self.tvecs['sxr'] - self.vals[val]))

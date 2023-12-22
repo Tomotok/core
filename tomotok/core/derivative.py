@@ -32,7 +32,7 @@ def compute_iso_dmats(grid, derivatives=[1, 2], mask=None):
     list of dmat pairs
     """
     if mask is None:
-        mask = np.ones(grid.size, dtype=np.bool)
+        mask = np.ones(grid.size, dtype=bool)
     if isinstance(derivatives, int):
         derivatives = [derivatives]
     dmats = []
@@ -73,7 +73,7 @@ def compute_aniso_dmats(grid, magflux, derivative=4, mask=None):
     # dmats = compute_aniso_dmats(self.grid, smoothing=1, magflux=mf)
 
     if mask is None:
-        mask = np.ones(grid.size, dtype=np.bool)
+        mask = np.ones(grid.size, dtype=bool)
     dr = grid.dr
     dz = grid.dz
     npix = grid.nodes_num
@@ -176,15 +176,15 @@ def generate_anizo_matrix(grid, atan2, derivative):
     # decomposition of flux contour direction to two neighboring pixels
     for k in [0, 1]:
         # pixel with maximum contribution and px with second maximum contribution (45deg neighbour)
-        direction = np.int_(np.mod(np.floor(atan2 / (np.pi/4) + k), 8))
+        direction = (np.mod(np.floor(atan2 / (np.pi/4) + k), 8)).astype(int)
 
         # array of reference indices
-        dir_ = np.array((-1, 2, 3, 4, 1, -2, -3, -4), dtype=np.int)  # F like
-        # dir_ = np.array((-3, -2, 1, 4, 3, 2, -1, -4), dtype=np.int)  # C like
+        dir_ = np.array((-1, 2, 3, 4, 1, -2, -3, -4), dtype=int)  # F like
+        # dir_ = np.array((-3, -2, 1, 4, 3, 2, -1, -4), dtype=int)  # C like
         # C  [-4, -3, -2]       F  [-4, -1,  2]
         #    [-1,  0,  1]          [-3,  0,  3]
         #    [ 2,  3,  4]          [-2,  1,  4]
-        # dir_ = np.array((-1, ny-1, ny, ny+1, 1, -ny+1, -ny, -ny-1), dtype=np.int)  # is compressed form
+        # dir_ = np.array((-1, ny-1, ny, ny+1, 1, -ny+1, -ny, -ny-1), dtype=int)  # is compressed form
 
         next_ = np.squeeze(dir_[direction])
 

@@ -123,7 +123,7 @@ class GraphMerfer(GraphWindow):
         self.ax.cla()
         for d in self.diags:
             tind = np.argmin(np.abs(self.tvecs[d] - self.vals[val]))
-            chnls = np.arange(self.me_data[d].shape[0], dtype=np.float64)
+            chnls = np.arange(self.me_data[d].shape[0], dtype=float)
             # self.ax.plot(self.me_data[d][:, tind], c='C{}'.format(i), label='Measured {}'.format(d))
             try:
                 err = self.errors[d][:, tind]

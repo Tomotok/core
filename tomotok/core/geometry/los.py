@@ -40,7 +40,7 @@ def generate_directions(num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
         ntot = num
         num = (num, 1)
 
-    dirs = np.full((ntot, 3), elong, dtype=np.double)
+    dirs = np.full((ntot, 3), elong, dtype=float)
 
     ve = elong * np.tan(fov[0] / 2)
     ye = elong * np.tan(fov[1] / 2)

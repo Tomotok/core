@@ -345,14 +345,14 @@ class DataHandler(object):
         ----------
         chnls : iterable of ints
         """
-        # chnls = np.array(chnls, ndmin=1, dtype=np.int)
+        # chnls = np.array(chnls, ndmin=1, dtype=int)
         chnls = np.unique(chnls)
         mask = np.isin(chnls, self.chnls)
         if not mask.all():
             warn('Channels not in data: {}'.format(chnls[~mask]))
         chnls = chnls[mask]
         idx = np.searchsorted(self.chnls, chnls)
-        mask = np.ones_like(self.chnls, dtype=np.bool)
+        mask = np.ones_like(self.chnls, dtype=bool)
         mask[idx] = 0
         self.chnls = self.chnls[mask]
         self.data = self.data[:, mask]

@@ -156,7 +156,7 @@ class Tokamak(Dsystem):
         dict
         """
         if tvec is None:
-            tidx = np.arange(magfield['time'].size, dtype=np.int)
+            tidx = np.arange(magfield['time'].size, dtype=int)
         else:
             tidx = np.searchsorted(magfield['time'], tvec)
             tidx = np.unique(tidx)

@@ -47,7 +47,7 @@ def shapely_line_mat(xchord, ychord, grid):
         if complex_chord:
             crop = (xchord[i] < xg[-1]) * (xchord[i] > xg[0])
         else:
-            crop = np.ones(xchord.shape[1], dtype=np.bool)
+            crop = np.ones(xchord.shape[1], dtype=bool)
         coords = np.stack((xchord[i, crop], ychord[i, crop]), axis=1)
         line = sg.LineString(coords)
         lines.append(line)
@@ -126,7 +126,7 @@ def shapely_poly_mat(xchord, ychord, grid, ph=None, w=None):
         if complex_chord:
             crop = (xchord[i] < xg[-1]) * (xchord[i] > xg[0])
         else:
-            crop = np.ones(xchord.shape[1], dtype=np.bool)
+            crop = np.ones(xchord.shape[1], dtype=bool)
         chord = np.stack((xchord[i, crop], ychord[i, crop]), axis=1)
         string = sg.LineString(chord)
         strings.append(string)
