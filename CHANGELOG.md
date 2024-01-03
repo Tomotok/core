@@ -1,4 +1,11 @@
-Version 1.3 (21.7.2023)
+Version 1.3.1 (03.01.2024)
+==========================
+
+Fixes
+-----
+ - numpy ndarray dtype parameters to be compatible with newer numpy versions
+
+Version 1.3 (21.07.2023)
 =======================
 
 Changes
