@@ -9,7 +9,7 @@ Contains functions and classes required for geometry matrix computation using si
  - line of sight generators for artificial diagnostics
  - gmat handler prototype
 """
-from .generators import sparse_line_3d, calcam_sparse_line_3d
+from .generators import dense_line, sparse_line, calcam_sparse_line
 from .grids import RegularGrid
-from .los import generate_los, generate_directions
-from .io import save_sparse_gmat, load_sparse_gmat
+from .los import generate_los, generate_directions, save_los
+from .io import *
