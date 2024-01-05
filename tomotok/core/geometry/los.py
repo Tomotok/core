@@ -2,14 +2,22 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Routines for generation of line of sight start and end points.
-
-Creates the lines of sights in x axis direction and then rotates them about the other horizontal axis, then about vertical axis.
+Routines for generating line of sight start and end points.
 """
+import json
+from pathlib import Path
+from typing import Tuple, Union, List
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 
-def generate_directions(num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
+NumberType = Union[int, Tuple[int, int]]
+FovType = Union[float, Tuple[float, float]]
+VectorType = Union[Tuple[float, float, float], np.ndarray]
+
+
+def generate_directions(num: NumberType = (10, 1), fov: FovType = (45, 0), axis: VectorType = (1, 0, 0), length=1.) -> np.ndarray:
     """
     Creates direction vectors for lines of sight using camera like convention.
 
@@ -23,8 +31,8 @@ def generate_directions(num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
         vertical or (vertical, horizontal) field of view in degrees
     axis : tuple of three floats, optional
         direction of symmetry axis
-    elong : float, optional
-        vector length multiplier
+    length : float, optional
+        line of sight length, by default 1
 
     Returns
     -------
@@ -34,16 +42,14 @@ def generate_directions(num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
     if isinstance(fov, (int, float)):
         fov = (fov, 0)
     fov = np.deg2rad(fov)
-    try:
-        ntot = num[0] * num[1]
-    except TypeError:
-        ntot = num
+    if isinstance(num, int):
         num = (num, 1)
+    ntot = num[0] * num[1]
 
-    dirs = np.full((ntot, 3), elong, dtype=np.double)
+    dirs = np.full((ntot, 3), length, dtype=float)
 
-    ve = elong * np.tan(fov[0] / 2)
-    ye = elong * np.tan(fov[1] / 2)
+    ve = length * np.tan(fov[0] / 2)
+    ye = length * np.tan(fov[1] / 2)
     vg = np.linspace(ve, -ve, num[0])
     yg = np.linspace(-ye, ye, num[1])
 
@@ -71,7 +77,8 @@ def generate_directions(num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
     return dirs
 
 
-def generate_los(pinhole=(0, 0, 0), num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
+def generate_los(pinhole: VectorType = (0, 0, 0), num: NumberType = (10, 1), fov: FovType = (45, 0), axis: VectorType = (1, 0, 0), length=1.
+                 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Creates line of sight endpoints with uniform distribution.
 
@@ -85,8 +92,8 @@ def generate_los(pinhole=(0, 0, 0), num=(10, 1), fov=(45, 0), axis=(1, 0, 0), el
         vertical and horizontal field of view in degrees
     axis : tuple of three floats, optional
         direction of chordal axis
-    elong : float, optional
-        chord length multiplier
+    length : float, optional
+        line of sight length, by default 1
 
     Returns
     -------
@@ -95,13 +102,13 @@ def generate_los(pinhole=(0, 0, 0), num=(10, 1), fov=(45, 0), axis=(1, 0, 0), el
     end : numpy.ndarray
         array with line of sight end points coordinates, shape (#los, 3)
     """
-    directions = generate_directions(num, fov, axis, elong)
+    directions = generate_directions(num, fov, axis, length)
     start = np.full_like(directions, pinhole)
     end = directions + pinhole
-    return np.array((start, end))
+    return start, end
 
 
-def rot_v(points, angle):
+def rot_v(points: ArrayLike, angle: float) -> np.ndarray:
     """
     Rotates given points in vertical direction, that is about horizontal y axis perpendicular to r/x.
 
@@ -124,11 +131,11 @@ def rot_v(points, angle):
     mat = np.array(((c, 0, s),
                     (0, 1, 0),
                     (-s, 0, c)))
-    rpoints = points.dot(mat)
+    rpoints = points @ mat
     return rpoints
 
 
-def rot_h(points, angle):
+def rot_h(points: ArrayLike, angle: float) -> np.ndarray:
     """
     Rotates given points in horizontal direction, that is about vertical axis z.
 
@@ -149,5 +156,58 @@ def rot_h(points, angle):
     mat = np.array(((c, s, 0),
                     (-s, c, 0),
                     (0, 0, 1)))
-    rpoints = points.dot(mat)
+    rpoints = points @ mat
     return rpoints
+
+
+def save_los(
+        loc: Union[str, Path], 
+        startpoints: Union[ArrayLike, List[ArrayLike]], 
+        endpoints: Union[ArrayLike, List[ArrayLike]], 
+        detector_names: Union[str, List[str]] = None
+):
+    """
+    Saves line of sight start and end points to json file.
+
+    Parameters
+    ----------
+    loc : str or Path
+        location of los file for saving
+    startpoints, endpoints : list of numpy.ndarray
+        list of arrays with start and end points coordinates, shape (#chords, 3)
+    detector_names : list of str, optional
+        list of detector names, `detector_#` is used if not specified
+    """
+    loc = Path(loc).expanduser()
+    startpoints = np.array(startpoints)
+    endpoints = np.array(endpoints)
+    if endpoints.shape != startpoints.shape:
+        raise ValueError('Start and end points lists must have same length and shape.')
+    if startpoints.ndim == 3:
+        points_number = len(startpoints)
+    elif startpoints.ndim == 2:
+        points_number = 1
+        startpoints = startpoints[None, ...]
+        endpoints = endpoints[None, ...]
+    else:
+        raise ValueError('Start and end points arrays must be 2D arrays.')
+
+    if detector_names is None:
+        detector_names = [f'detector_{i}' for i in range(points_number)]
+    elif isinstance(detector_names, str):
+        detector_names = [detector_names]
+    if len(detector_names) != points_number:
+        print(detector_names, points_number)
+        raise ValueError('Number of detector names must match number of start/end points.')
+
+    los = {}
+    for i, name in enumerate(detector_names):
+        los[name] = {
+            'startpoints': startpoints[i].tolist(), 
+            'endpoints': endpoints[i].tolist()
+        }
+
+    with open(loc, 'w') as fl:
+        json.dump(los, fl)
+
+    return

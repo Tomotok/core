@@ -9,16 +9,21 @@ from warnings import warn
 
 import numpy as np
 import scipy.sparse as sparse
+from numpy.typing import ArrayLike
 
 from .grids import RegularGrid
 
 
-def sparse_line_3d(rchord, vchord, grid, ychord=None, step=1e-3, rmin=None):
+def sparse_line_3d(rchord: ArrayLike, vchord: ArrayLike, grid: RegularGrid, 
+                   ychord: ArrayLike = None, step=1e-3, rmin: float = None) -> sparse.csr_matrix:
     """
     Computes geometry matrix using simple numerical integration algorithm.
 
     Assumes toroidally symmetric reconstruction nodes. 
     Optimized version working with sparse matrices.
+
+    .. deprecated:: 2.0
+        Use :func:`sparse_line` instead.
 
     Parameters
     ----------
@@ -37,7 +42,12 @@ def sparse_line_3d(rchord, vchord, grid, ychord=None, step=1e-3, rmin=None):
     Returns
     -------
     sparse.csr_matrix
+
+    See Also
+    --------
+    sparse_line
     """
+    warn('Deprecated by `sparse_line`', DeprecationWarning)
     if ychord is None:
         ychord = np.zeros_like(rchord)
     rchord = np.array(rchord, ndmin=2)
@@ -72,11 +82,15 @@ def sparse_line_3d(rchord, vchord, grid, ychord=None, step=1e-3, rmin=None):
     return gmat.tocsr()
 
 
-def calcam_sparse_line_3d(pupil, dirs, grid, step=1e-3, rmin=None, elong=1., steps=None):
+def calcam_sparse_line_3d(pupil: ArrayLike, dirs: ArrayLike, grid: RegularGrid, 
+                          step=1e-3, rmin: float = None, elong=1., steps: float = None) -> sparse.csr_matrix:
     """
     Computes geometry matrix from calcam input using sparse_line_3d algorithm.
 
     Assumes that pupil and dirs coordinates are (x, y, z) = (horizontal, horizontal, vertical)
+
+    .. deprecated:: 2.0
+        Use :func:`calcam_sparse_line` instead.
 
     Parameters
     ----------
@@ -96,7 +110,12 @@ def calcam_sparse_line_3d(pupil, dirs, grid, step=1e-3, rmin=None, elong=1., ste
     Returns
     -------
     sparse.csr_matrix
+
+    See Also
+    --------
+    calcam_sparse_line
     """
+    warn('Deprecated by `calcam_sparse_line`', DeprecationWarning)
     if steps is not None:
         warn('"steps" parameter was deprecated by "step"', DeprecationWarning)
         step = steps
@@ -113,7 +132,7 @@ def calcam_sparse_line_3d(pupil, dirs, grid, step=1e-3, rmin=None, elong=1., ste
     return gmat
 
 
-def sparse_line(starts, ends, grid, step=1e-3, rmin=-1):
+def sparse_line(starts: np.ndarray, ends: np.ndarray, grid: RegularGrid, step: float = 1e-3, rmin: float = 0):
     """
     Computes geometry matrix using simple numerical integration algorithm.
 
@@ -127,7 +146,7 @@ def sparse_line(starts, ends, grid, step=1e-3, rmin=-1):
         Reconstruction grid
     step : float, optional
         Integration step, by default 1e-3
-    rmin : int, optional
+    rmin : float, optional
         Stops the lines of sight if they intersect cylinder with radius of rmin, by default -1
 
     Returns
@@ -161,3 +180,75 @@ def sparse_line(starts, ends, grid, step=1e-3, rmin=-1):
         srow = sparse.coo_matrix(row.flatten())
         gmat[i] = srow
     return gmat.tocsr()
+
+
+def calcam_sparse_line(pupil: np.ndarray, endpoints: np.ndarray, grid: RegularGrid, **kw):
+    """Wrapper for typical calcam input.
+    
+    Parameters
+    ----------
+    pupil : np.ndarray
+        (x, y, z) coordinates of pupil position
+    endpoints : np.ndarray
+        (#rows, #columns, 3) line of sight end point coordinates
+    grid : tomotok.core.geometry.RegularGrid
+        reconstruction grid
+    **kw : dict
+        additional parameters passed to sparse_line
+
+    See Also
+    --------
+    sparse_line
+    """
+    startpoints = np.ones_like(endpoints) * pupil
+    return sparse_line(startpoints, endpoints, grid, **kw)
+
+
+def dense_line(starts: np.array, ends: np.array, grid: RegularGrid, step: float = 1e-3, rmin: float = 0):
+    """
+    Computes geometry matrix using simple numerical integration algorithm.
+
+    Uses lines of sight start and end points in 3D Cartesian coordinates as input.
+
+    Parameters
+    ----------
+    starts, ends : ndarray
+        Contains lines of sight start/end points, with shape (..., 3)
+    grid : RegularGrid
+        Reconstruction grid
+    step : float, optional
+        Integration step, by default 1e-3
+    rmin : float, optional
+        Stops the lines of sight if they intersect cylinder with radius of rmin, by default 0
+    
+    Returns
+    -------
+    ndarray
+        geometry matrix with shape (..., #nodes)
+    """
+    if starts.ndim > 2:
+        try:
+            starts = starts.reshape(-1, 3)
+            ends = ends.reshape(-1, 3)
+        except ValueError:
+            raise ValueError('starts and ends must be ndarrays with shape (..., 3)')
+    diff = ends - starts
+    dst = np.linalg.norm(diff, axis=1)
+    line_num = diff.shape[0]
+    gmat = np.zeros((line_num, grid.size))
+    for i in range(line_num):
+        steps = int(dst[i] / step)
+        x = np.linspace(starts[i, 0], ends[i, 0], steps)
+        y = np.linspace(starts[i, 1], ends[i, 1], steps)
+        z = np.linspace(starts[i, 2], ends[i, 2], steps)
+        r = np.sqrt(x**2 + y**2)
+        if rmin > 0:
+            hit = np.any(r < rmin)
+            if hit:
+                idx = r.argmin()
+                r = r[:idx]
+                z = z[:idx]
+        hist = np.histogram2d(r, z, bins=[grid.r_border, grid.z_border])
+        row = hist[0].T * dst[i] / steps
+        gmat[i] = row.flatten()
+    return gmat

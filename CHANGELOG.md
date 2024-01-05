@@ -1,4 +1,20 @@
-Version 1.3 (21.7.2023)
+Version 2.0 (DD.MM.2024)
+========================
+
+Changes
+-------
+ - Default MFR class uses cho_factor and cho_solve from scipy
+ - reworked format of line of sights, updated gmat computation functions
+ - line of sight saving to a single json file
+
+New Features
+------------
+ - tests for line of sight saving and loading
+
+Fixes
+-----
+
+Version 1.3 (21.07.2023)
 =======================
 
 Changes

@@ -1,6 +1,15 @@
 image: repo.tok.ipp.cas.cz:5050/tomography/core/tomotok-sphinx:latest
 
-test:
+stages:
+  - test
+  - deploy
+
+test_code:
+  stage: test
+  script:
+  - python3 -m unittest discover -s tomotok -p "test_*.py"
+
+test_pages:
   stage: test
   script:
   - sphinx-build -b html docs/source public
