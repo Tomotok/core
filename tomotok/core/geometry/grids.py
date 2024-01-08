@@ -8,6 +8,7 @@ from typing import Tuple
 
 import numpy as np
 from matplotlib.path import Path as MplPath
+from numpy.typing import NDArray
 
 
 class RegularGrid(object):
@@ -113,17 +114,16 @@ class RegularGrid(object):
         return np.meshgrid(self.r_center, self.z_center)
 
     @property
+    def border_mesh(self) -> np.ndarray:
+        return np.meshgrid(self.r_border, self.z_border)
+
+    @property
     def rlims(self) -> Tuple[float, float]:
         return (self.rmin, self.rmax)
 
     @property
     def zlims(self) -> Tuple[float, float]:
         return (self.zmin, self.zmax)
-
-    def __repr__(self):
-        msg = 'Node grid with resolution {}h{}'.format(self.nr, self.nz)
-        msg += ' and bounds ({};{})r, ({};{})z.'.format(*self.extent)
-        return msg
 
     def is_inside(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
@@ -132,7 +132,7 @@ class RegularGrid(object):
         Parameters
         ----------
         r, z : numpy.ndarray
-            Coordinate vectors of polygon
+            Coordinates of polygon points
 
         Returns
         -------
@@ -179,11 +179,11 @@ class RegularGrid(object):
                 inside[i, j] = any([bl, br, tl, tr])
         return inside
 
-    def corners(self, mask: np.ndarray=None) -> np.ndarray:
+    def corners(self, mask: NDArray[np.bool_] = None) -> np.ndarray:
         """
         Creates an array with r, z coordinates of node corners. 
         
-        Corners are in clockwise order starting with top left corner.
+        Corners are in clockwise order starting from top left.
 
         Parameters
         ----------
@@ -195,15 +195,11 @@ class RegularGrid(object):
         numpy.ndarray
             corner coordinates for each node in reconstruction plane, shape (#z, #r, 4, 2)
         """
-        corners = np.empty((*self.shape, 4, 2))
-        # top left
-        tl = np.meshgrid(self.r_border[:-1], self.z_border[1:])
-        # top right
-        tr = np.meshgrid(self.r_border[1:], self.z_border[1:])
-        # bottom right
-        br = np.meshgrid(self.r_border[1:], self.z_border[:-1])
-        # bottom left
-        bl = np.meshgrid(self.r_border[:-1], self.z_border[:-1])
+        mesh_r, mesh_z = self.border_mesh
+        tl = (mesh_r[1:, :-1], mesh_z[1:, :-1])  # top left
+        tr = (mesh_r[1:, 1:], mesh_z[1:, 1:])  # top right
+        br = (mesh_r[:-1, 1:], mesh_z[:-1, 1:])  # bottom right
+        bl = (mesh_r[:-1, :-1], mesh_z[:-1, :-1])  # bottom left
         
         corners = np.stack((tl, tr, br, bl)).transpose(2, 3, 0, 1)
         if mask is not None:
