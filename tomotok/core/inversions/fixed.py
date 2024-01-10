@@ -11,8 +11,7 @@ import numpy as np
 import scipy.sparse as sparse
 from scipy.sparse.linalg import spsolve
 
-from .mfr import Mfr, CholmodMfr
-from .jax import Jaxed
+from .mfr import Mfr
 
 
 class Fixt(Mfr):
@@ -231,7 +230,3 @@ class CholmodFixt(Fixt):
         """
         factor = self.cholesky(a)
         return factor(b)
-
-
-class JaxedFixt(Jaxed, Fixt):
-    pass

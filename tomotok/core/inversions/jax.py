@@ -7,6 +7,9 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.sparse import spmatrix
 
+from .mfr import Mfr
+from .fixed import Fixt
+
 
 class Jaxed(object):
     """
@@ -16,12 +19,12 @@ class Jaxed(object):
     Uses jax.scipy.linalg cho_factor and cho_solve
     """
     def __init__(self) -> None:
-        super().__init__()
         from jax import config
         from jax.scipy.linalg import cho_factor, cho_solve
         config.update("jax_enable_x64", True)
         self.cho_factor = cho_factor
         self.cho_solve = cho_solve
+        super().__init__()
 
     def invert(self, a: Union[ArrayLike, spmatrix], b: ArrayLike) -> np.ndarray:
         r"""
@@ -39,3 +42,11 @@ class Jaxed(object):
         factor = self.cho_factor(a)
         x = self.cho_solve(factor, b)
         return np.copy(x)
+
+
+class JaxedMfr(Jaxed, Mfr):
+    pass
+
+
+class JaxedFixt(Jaxed, Fixt):
+    pass

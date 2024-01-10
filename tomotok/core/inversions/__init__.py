@@ -13,5 +13,7 @@ Currently implemented
 
 from .bob import Bob, SparseBob, SimpleBob, CholmodBob
 from .lame import SvdFastAlgebraic, GevFastAlgebraic
-from .mfr import Mfr, CholmodMfr, JaxedMfr
-from .fixed import Fixt, CholmodFixt, JaxedFixt
+from .sksparse import CholmodMfr, CholmodFixt
+from .mfr import Mfr
+from .fixed import Fixt
+from .jax import JaxedMfr, JaxedFixt
