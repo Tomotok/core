@@ -11,9 +11,9 @@ Currently implemented
  - Fixed parameter MFR
 """
 
-from .bob import Bob, SparseBob, SimpleBob, CholmodBob
+from .bob import Bob, SparseBob
 from .lame import SvdFastAlgebraic, GevFastAlgebraic
-from .sksparse import CholmodMfr, CholmodFixt
+from .sksparse import CholmodMfr, CholmodFixt, CholmodBob
 from .mfr import Mfr
 from .fixed import Fixt
 from .jax import JaxedMfr, JaxedFixt

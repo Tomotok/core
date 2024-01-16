@@ -1,3 +1,6 @@
+from scipy import sparse
+
+from .bob import Bob
 from .mfr import Mfr
 from .fixed import Fixt
 
@@ -17,7 +20,7 @@ class Cholmod(object):
         from sksparse.cholmod import cholesky
         self.cholesky = cholesky
 
-    def invert(self, a, b):
+    def invert(self, a : sparse.spmatrix, b):
         r"""
         Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using sksparse.cholmod.cholesky
 
@@ -38,3 +41,23 @@ class CholmodMfr(Cholmod, Mfr):
 
 class CholmodFixt(Cholmod, Fixt):
     pass
+
+
+class CholmodBob(Bob):
+    """
+    Decomposition optimized for sparse matrices using Cholesky decomposition
+
+    Uses sksparse.cholmod.cholesky to solve the decomposition
+    Requires positive definite symmetrized geometry matrix in reconstruction plane basis.
+    """
+
+    def compute_coefficients(self, a: sparse.spmatrix, solver_kw: dict = None) -> sparse.csr_matrix:
+        from sksparse.cholmod import cholesky, CholmodNotPositiveDefiniteError
+        try:
+            factor = cholesky(a, **solver_kw)
+        except CholmodNotPositiveDefiniteError:
+            raise ValueError('Symmetrized matrix was not positive definite. Try increasing regularisation factor.')
+        b = sparse.eye(a.shape[0])
+        c = factor(b)
+        return c
+

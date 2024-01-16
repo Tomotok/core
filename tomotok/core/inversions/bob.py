@@ -12,7 +12,9 @@ import warnings
 
 import h5py
 import numpy as np
-import scipy.sparse as sparse
+from scipy import sparse
+from scipy.linalg import cho_factor, cho_solve
+
 
 from tomotok.core.tools.hdf import sparse_to_hdf, hdf_to_sparse
 
@@ -49,7 +51,7 @@ class Bob(object):
         self.norms = None
         return
 
-    def decompose(self, gmat, basis, reg_factor=0, solver_kw: dict=None):
+    def decompose(self, gmat: sparse.spmatrix, basis: sparse.spmatrix, reg_factor: float = 0, solver_kw: dict = None):
         """
         Decomposes the geometry matrix using basis vectors
 
@@ -66,18 +68,30 @@ class Bob(object):
             keyword parameters passed to the solver function
         """
         solver_kw = solver_kw or {}
-        if gmat.shape[0] < gmat.shape[1]:
+        los_num = gmat.shape[0]
+        node_num = gmat.shape[1]
+        if los_num < node_num:
             warnings.warn('Biorthogonal algorithm requires more lines of sights than nodes in reconstruction plane to run reliably')
         self.basis = basis
         image_base = gmat @ self.basis  # e_i previously known as chi, gmat in basis
-        a = (image_base.T @ image_base).toarray()  # symmetrized geometry matrix in basis
+        a = (image_base.T @ image_base)  # symmetrized geometry matrix in basis
         if reg_factor:
-            a = a + a.max() * reg_factor * np.eye(*a.shape)
-        b = np.eye(gmat.shape[1])
-        res = np.linalg.lstsq(a, b, **solver_kw)
-        c = sparse.csr_matrix(res[0])  # coefficient matrix
+            a = a + a.max() * reg_factor * sparse.eye(*a.shape)
+        c = self.compute_coefficients(a, solver_kw)  # coefficient matrix
         self.dec_mat = image_base @ c  # \hat{e}_i previously known as xi, decomposed matrix
         return
+
+    def compute_coefficients(self, a: sparse.spmatrix, solver_kw=None) -> sparse.csr_matrix:
+        """Obtains coefficient matrix"""
+        # if isinstance(a, sparse.spmatrix):
+        a = a.toarray()
+        # b = np.eye(a.shape[0])
+        # res = np.linalg.lstsq(a, b, **solver_kw)
+        # c = sparse.csr_matrix(res[0])  # coefficient matrix
+        factor = cho_factor(a)
+        b = np.eye(a.shape[0])
+        c = cho_solve(factor, b)
+        return sparse.csr_matrix(c)
 
     def __call__(self, data, gmat=None, thresholding=None, **kw):
         """
@@ -172,7 +186,7 @@ class Bob(object):
     @property
     def dec_mat_normed(self):
         """
-        .. deprecated :: 1.3
+        .. deprecated:: 1.3
         """
         warnings.warn('dec_mat_normed was deprecated in v1.3', DeprecationWarning)
         if self.norms is None:
@@ -228,85 +242,17 @@ class Bob(object):
         return out
 
 
-class SimpleBob(Bob):
-    """
-    Automatically creates simple one node basis as an sparse identity matrix
-
-    .. deprecated:: 1.1
-    """
-
-    def __init__(self, dec_mat=None, basis=None):
-        warnings.warn('SimpleBob is deprecated since v1.1', DeprecationWarning)
-        super().__init__(dec_mat, basis)
-    
-    def decompose(self, gmat, basis=None):
-        if basis is not None:
-            warnings.warn('Ignoring basis input')
-        basis = sparse.eye(gmat.shape[1])
-        return super().decompose(gmat, basis)
-
-
 class SparseBob(Bob):
     """
     Biorthogonal Basis Decomposition optimized for sparse matrices using inverse matrix calculation.
     """
 
-    def decompose(self, gmat, basis, reg_factor=0, solver_kw=None):
-        if solver_kw is not None:
-            raise TypeError('scipy.sparse.linalg.inv does not take any keywords')
-        if gmat.shape[0] < gmat.shape[1]:
-            warnings.warn('Biorthogonal algorithm requires more '
-            'lines of sights than nodes in reconstruction plane to run reliably')
-        self.basis = basis
-        image_base = gmat @ self.basis  # chi
-        a = image_base.T @ image_base
-        if reg_factor:
-            a = a + a.max() * reg_factor * sparse.eye(*a.shape)
+    def compute_coefficients(self, a: sparse.spmatrix, solver_kw: dict = None) -> sparse.csr_matrix:
+        # FIXME: sparse solver kw handling
+        # if solver_kw is not None:
+        #     raise TypeError('scipy.sparse.linalg.inv does not take any keywords')
         try:
             c = sparse.linalg.inv(a)
         except RuntimeError:
             raise ValueError('Singular symmetrized matrix factor. Try increasing regularisation factor.')
-        self.dec_mat = image_base @ c  # xi
-        return
-
-
-class CholmodBob(Bob):
-    """
-    Decomposition optimized for sparse matrices using Cholesky decomposition
-
-    Uses sksparse.cholmod.cholesky to solve the decomposition
-    Requires positive definite symmetrized geometry matrix in reconstruction plane basis.
-    """
-
-    def decompose(self, gmat, basis, reg_factor=1e-3, solver_kw=None):
-        """
-        Decomposes geometry matrix using Cholesky decomposition and projects images
-
-        Parameters
-        ----------
-        gmat : scipy.sparse.csr_matrix
-            geometry/contribution matrix
-        basis : sparse matrix
-            matrix with basis vectors
-        reg_factor : float, optional
-            regularisation factor passed to cholesky decomposition
-            determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
-        solver_kw : dict
-            keyword parameters passed to the solver function
-        """
-        solver_kw = solver_kw or {}
-        from sksparse.cholmod import cholesky, CholmodNotPositiveDefiniteError
-        if gmat.shape[0] < gmat.shape[1]:
-            warnings.warn('Biorthogonal algorithm can be prone to failure if there are more '
-            'lines of sights than nodes in reconstruction plane')
-        self.basis = basis
-        image_base = gmat @ self.basis  # chi
-        a = image_base.T @ image_base
-        try:
-            factor = cholesky(a, a.max()*reg_factor, **solver_kw)
-        except CholmodNotPositiveDefiniteError:
-            raise ValueError('Symmetrized matrix was not positive definite. Try increasing regularisation factor.')
-        b = sparse.csc_matrix(np.eye(gmat.shape[1]))
-        c = factor(b)
-        self.dec_mat = image_base @ c  # xi
-        return
+        return c
