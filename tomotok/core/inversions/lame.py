@@ -140,8 +140,8 @@ class Algebraic(object):
             res[i] = self.invert(signal, gmat_nrm, reg, method=method, num=num)
         return res
     
-    # TODO make it an external function
-    def regularisation_matrix(self, derivatives, aniso=1):
+    # TODO make it an external function?
+    def regularisation_matrix(self, derivatives: sparse.spmatrix, derivative_weights=None, node_weights=None):
         """
         Computes regularisation matrix from derivatives matrices.
 
@@ -157,19 +157,17 @@ class Algebraic(object):
         _type_
             _description_
         """
-        # relative weighting
-        w1 = aniso / (1 + aniso)
-        w2 = 1 / (1 + aniso)
-        n_der = len(derivatives)
-        hs = np.zeros((n_der, *derivatives[0][0].shape))
-        for i in range(n_der):
-            # TODO
-            tmp0 = derivatives[i][0].T.dot(derivatives[i][0])
-            tmp1 = derivatives[i][1].T.dot(derivatives[i][1])
-            hs[i, ...] = (w1 * tmp0 + w2 * tmp1).toarray()
-        # h = np.sum(hs).toarray()
-        h = hs.mean(axis=0)
-        return h
+        if isinstance(derivatives, sparse.spmatrix):
+            derivatives = [derivatives]
+        if derivative_weights is None:
+            derivative_weights = [1] * len(derivatives)
+        if node_weights is None:
+            node_weights = sparse.diags([1], 0, shape=derivatives[0].shape)
+        total = sum(derivative_weights)
+        regularisation = sparse.csr_matrix(derivatives[0].shape)
+        for dw, dmat in zip(derivative_weights, derivatives):
+            regularisation += dw / total * dmat.T @ node_weights @ dmat
+        return derivatives
     
     def normalize_gmat(self, gmat: np.ndarray, errors: np.ndarray) -> np.ndarray:
         """
@@ -193,7 +191,7 @@ class Algebraic(object):
 
     def presolve(self, gmat, deriv):
         """
-        .. deprecated :: 1.1
+        .. deprecated:: 1.1
             Use :meth:`decompose`  
         """
         self.decompose(gmat, deriv)
