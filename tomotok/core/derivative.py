@@ -10,7 +10,7 @@ from scipy import sparse
 from .geometry import RegularGrid
 
 
-def reduce_matrix(mat: sparse.spmatrix, mask: np.ndarray, compensate_edges=True) -> sparse.spmatrix:
+def reduce_matrix(mat: sparse.spmatrix, mask: np.ndarray) -> sparse.spmatrix:
     """
     Creates reduced matrix by cutting out rows and columns representing unwanted nodes.
 
@@ -31,10 +31,26 @@ def reduce_matrix(mat: sparse.spmatrix, mask: np.ndarray, compensate_edges=True)
     elif mask.ndim > 2:
         raise ValueError('Mask must be 1D or 2D array.')
     mat = mat[mask, :][:, mask]
-    if compensate_edges:
-        row_sum = np.array(mat.sum(1)).flatten()
-        row_sum_diag = sparse.diags([row_sum], [0], format='csc')
-        mat = mat - row_sum_diag
+    return mat
+
+
+def compensate_matrix(mat: sparse.spmatrix) -> sparse.spmatrix:
+    """
+    Subtracts from diagonal so that sum of each row is zero.
+
+    Parameters
+    ----------
+    mat : scipy.sparse.spmatrix
+        matrix to be compensated
+
+    Returns
+    -------
+    scipy.sparse.csc_matrix
+        compensated matrix
+    """
+    row_sum = np.array(mat.sum(1)).flatten()
+    row_sum_diag = sparse.diags([row_sum], [0], format='csc')
+    mat = mat - row_sum_diag
     return mat
 
 
@@ -129,7 +145,9 @@ def derivative_matrix(
     # normalisation
     dmat = dmat / step
     if mask is not None:
-        dmat = reduce_matrix(dmat, mask, compensate_edges)
+        dmat = reduce_matrix(dmat, mask)
+    if compensate_edges:
+        dmat = compensate_matrix(dmat)
     return dmat
 
 
@@ -174,7 +192,9 @@ def laplace_matrix(grid: RegularGrid, mask=None, compensate_edges=True, diagonal
         lmat -= 4 / diagonal_distance * center
 
     if mask is not None:
-        lmat = reduce_matrix(lmat, mask, compensate_edges)
+        lmat = reduce_matrix(lmat, mask)
+    if compensate_edges:
+        lmat = compensate_matrix(lmat)
     return lmat
 
 
@@ -271,5 +291,7 @@ def anisotropic_derivative_matrix(
     )
     derivative = sparse.diags(diagonals_cropped, offsets, format='csc', shape=(grid.size, grid.size))
     if mask is not None:
-        derivative = reduce_matrix(derivative, mask, compensate_edges)
+        derivative = reduce_matrix(derivative, mask)
+    if compensate_edges:
+        derivative = compensate_matrix(derivative)
     return derivative
