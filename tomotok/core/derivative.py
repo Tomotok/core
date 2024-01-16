@@ -19,7 +19,8 @@ def reduce_matrix(mat: sparse.spmatrix, mask: np.ndarray) -> sparse.spmatrix:
     mat : scipy.sparse.spmatrix
         matrix to be reduced
     mask : numpy.ndarray of bool
-        array or mask array to select desired nodes
+        mask array for selecting desired nodes, True for nodes to keep
+        must be 1D or 2D, size must match grid size (# rows or # columns)
 
     Returns
     -------
@@ -30,6 +31,8 @@ def reduce_matrix(mat: sparse.spmatrix, mask: np.ndarray) -> sparse.spmatrix:
         mask = mask.flatten()
     elif mask.ndim > 2:
         raise ValueError('Mask must be 1D or 2D array.')
+    if mask.size != mat.shape[0]:
+        raise ValueError('Mask size does not match derivative matrix size.')
     mat = mat[mask, :][:, mask]
     return mat
 
