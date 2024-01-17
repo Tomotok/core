@@ -51,7 +51,7 @@ class Bob(object):
         self.norms = None
         return
 
-    def decompose(self, gmat: sparse.spmatrix, basis: sparse.spmatrix, reg_factor: float = 0, solver_kw: dict = None):
+    def decompose(self, gmat: sparse.csr_matrix, basis: sparse.csr_matrix, reg_factor: float = 0, solver_kw: dict = None):
         """
         Decomposes the geometry matrix using basis vectors
 
@@ -65,7 +65,11 @@ class Bob(object):
             regularisation factor passed to cholesky decomposition
             determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
         solver_kw : dict
-            keyword parameters passed to the solver function
+            keyword parameters passed to the compute_coefficients method
+        
+        See Also
+        --------
+        compute_coefficients : method handling computation of coefficients to see supported solver keywords
         """
         solver_kw = solver_kw or {}
         los_num = gmat.shape[0]
@@ -76,21 +80,27 @@ class Bob(object):
         image_base = gmat @ self.basis  # e_i previously known as chi, gmat in basis
         a = (image_base.T @ image_base)  # symmetrized geometry matrix in basis
         if reg_factor:
-            a = a + a.max() * reg_factor * sparse.eye(*a.shape)
-        c = self.compute_coefficients(a, solver_kw)  # coefficient matrix
+            a = a + a.max() * reg_factor * sparse.eye(*a.shape, format='csc')
+        c = self.compute_coefficients(a, **solver_kw)  # coefficient matrix
         self.dec_mat = image_base @ c  # \hat{e}_i previously known as xi, decomposed matrix
         return
 
-    def compute_coefficients(self, a: sparse.spmatrix, solver_kw=None) -> sparse.csr_matrix:
-        """Obtains coefficient matrix"""
-        # if isinstance(a, sparse.spmatrix):
-        a = a.toarray()
-        # b = np.eye(a.shape[0])
-        # res = np.linalg.lstsq(a, b, **solver_kw)
-        # c = sparse.csr_matrix(res[0])  # coefficient matrix
-        factor = cho_factor(a)
+    def compute_coefficients(self, a: sparse.csc_matrix, check_finite=False) -> sparse.csr_matrix:
+        """
+        Computes coefficient matrix using cho_factor and cho_solve from scipy.linalg
+
+        Parameters
+        ----------
+        a : scipy.sparse.csr_matrix
+            square and positive definite matrix
+        check_finite : bool, optional
+            toggles checking elements in a by cho_factor, by default False
+        """
+        if isinstance(a, sparse.spmatrix):
+            a = a.toarray()
+        factor = cho_factor(a, check_finite=check_finite)
         b = np.eye(a.shape[0])
-        c = cho_solve(factor, b)
+        c = cho_solve(factor, b, check_finite=False)
         return sparse.csr_matrix(c)
 
     def __call__(self, data, gmat=None, thresholding=None, **kw):
@@ -195,7 +205,7 @@ class Bob(object):
             return self.dec_mat.multiply(sparse.csr_matrix(self.norms[:, 0]))
 
 
-    def thresholding(self, image, c: int, precision: float=1e-6, conv: float=1e-9):
+    def thresholding(self, image, c: int, precision: float = 1e-6, conv: float = 1e-9):
         """
         Applies thresholding method to provided image.
 
@@ -247,10 +257,7 @@ class SparseBob(Bob):
     Biorthogonal Basis Decomposition optimized for sparse matrices using inverse matrix calculation.
     """
 
-    def compute_coefficients(self, a: sparse.spmatrix, solver_kw: dict = None) -> sparse.csr_matrix:
-        # FIXME: sparse solver kw handling
-        # if solver_kw is not None:
-        #     raise TypeError('scipy.sparse.linalg.inv does not take any keywords')
+    def compute_coefficients(self, a: sparse.csc_matrix) -> sparse.csr_matrix:
         try:
             c = sparse.linalg.inv(a)
         except RuntimeError:
