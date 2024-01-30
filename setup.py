@@ -22,4 +22,5 @@ setup(
     packages=find_namespace_packages(include=['tomotok.*']),
     python_requires='>=3.6',
     install_requires=['numpy>=1.20', 'scipy>=1.1.0', 'matplotlib>=2.2.2', 'h5py>=2.7.1'],
+    include_package_data=True,
 )
