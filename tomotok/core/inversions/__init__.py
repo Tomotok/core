@@ -12,6 +12,6 @@ Currently implemented
 """
 
 from .bob import Bob, SparseBob, SimpleBob, CholmodBob
-from .lame import SvdFastAlgebraic, GevFastAlgebraic
+from .lame import SvdFastAlgebraic
 from .mfr import Mfr, CholmodMfr, JaxedMfr
 from .fixed import Fixt, CholmodFixt, JaxedFixt

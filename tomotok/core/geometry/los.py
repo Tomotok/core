@@ -197,7 +197,6 @@ def save_los(
     elif isinstance(detector_names, str):
         detector_names = [detector_names]
     if len(detector_names) != points_number:
-        print(detector_names, points_number)
         raise ValueError('Number of detector names must match number of start/end points.')
 
     los = {}

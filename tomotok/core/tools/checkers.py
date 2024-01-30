@@ -8,36 +8,29 @@ Examples
 --------
 Checking anisotropic derivative matrix computed from DataArray with magnetic flux surfaces `magnetic_flux`
 
->>> from tomotok.core.io import Pixgrid, Tokamak
->>> time = 1.2
->>> shot = 19925
->>> coord = Pixgrid(50, 100, (0.5, 1), (-0.5, 0.5))
->>> magf = Tokamak.interpolate_mag_field(magnetic_flux, coord)
->>> checker = DerivMatChecker(coord, magf)
->>> checker(time)
-
-# TODO
-Plotting geometry matrix stored at local drive
-
->>> from tomotok.utils.gmat import load_function  # not implemented yet
->>> gmat = load_function('path/to/gmat/file')
->>> fig = check_gmat(gmat)
+>>> from tomotok.core import RegularGrid, Tokamak
+>>> from tomotok.core.derivatives import anisotropic_derivative_matrix
+>>> 
+>>> grid = RegularGrid(50, 100, (0.5, 1), (-0.5, 0.5))
+>>> magnetic_flux = Tokamak.download_mag_field(...)
+>>> flux = Tokamak.interpolate_mag_field(magnetic_flux, grid, time)
+>>> checker = AnisotropicDerivativeChecker(grid)
+>>> dmat_par = anisotropic_derivative_matrix(grid, flux, 'parallel')
+>>> dmat_per = anisotropic_derivative_matrix(grid, flux, 'perpendicular')
+>>> checker(flux, dmat_par, dmat_per)
 """
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import TwoSlopeNorm
+from scipy import sparse
 
-from tomotok.core.derivative import prepare_mag_data, generate_anizo_matrix
+from tomotok.core.geometry import RegularGrid
 
 
-class DerivMatChecker(object):
+class AnisotropicDerivativeChecker(object):
     """
     Computes anisotropic matrix for a time slice from provided magnetic flux and plots its components.
     Supports interactive selection of matrix element using mouse.
-
-    Parameters
-    ----------
-    coord : Pixgrid
-    magfield : dict
 
     Attributes
     ----------
@@ -46,126 +39,118 @@ class DerivMatChecker(object):
     fig2 :  matplotlib.figure
         contains two subplots with parallel and perpendicular parts of derivative matrix
     """
-    def __init__(self, coord, magfield):
-        self.nx, self.ny = coord.nx, coord.ny
-        self.coord = coord
-        self.fluxes = magfield
+    def __init__(
+            self, grid: RegularGrid, flux: np.ndarray, dmat1:sparse.spmatrix, dmat2: sparse.spmatrix,
+            contour_colors='k', contour_levels=10, dmat_cmap='RdBu',
+        ) -> None:
+        """
+        Parameters
+        ----------
+        grid : RegularGrid
+        """
+        self.grid = grid
         self.fig, self.ax = plt.subplots()
-        self.fig2, self.ax2 = plt.subplots(figsize=(8, 5), nrows=1, ncols=2)
-
+        self.fig2, self.ax2 = plt.subplots(figsize=(8, 5), nrows=1, ncols=2, sharey=True)
         self.ax.set_title('Magnetic flux')
+        self.ax.set_aspect('equal')
+        self.ax.set_xlabel('R [m]')
+        self.ax.set_ylabel('z [z]')
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
 
-        self.ax2[0].set_title('Check par_derivative')
-        self.ax2[0].set_xlabel('x [px]')
-        self.ax2[0].set_ylabel('y [px]')
+        im_extent = (-1.5* grid.dr, 1.5 * grid.dr, -1.5 * grid.dz, 1.5 * grid.dz)
+        self.ax2[0].set_title('Derivative 1')
+        self.ax2[0].set_xlabel(r'r - r${}_0$ [m]')
+        self.ax2[0].set_xticks([-grid.dr, 0, grid.dr])
+        self.ax2[0].set_ylabel(r'z - z${}_0$ [m]')
+        self.ax2[0].set_yticks([-grid.dz, 0, grid.dz])
+        norm1 = TwoSlopeNorm(0, dmat1.min(), dmat1.max())
+        self.im1 = self.ax2[0].imshow(np.ones((3, 3)), cmap=dmat_cmap, norm=norm1, extent=im_extent)
 
-        self.ax2[1].set_title('Check per_derivative')
-        self.ax2[1].set_xlabel('x [px]')
-        self.ax2[1].set_ylabel('y [px]')
-        self.ax2[1].yaxis.tick_right()
-        return
+        self.ax2[1].set_title('Derivative 2')
+        self.ax2[1].set_xlabel(r'r - r${}_0$ [m]')
+        self.ax2[1].set_xticks([-grid.dr, 0, grid.dr])
+        norm2 = TwoSlopeNorm(0, dmat2.min(), dmat2.max())
+        self.im2 = self.ax2[1].imshow(np.ones((3, 3)), cmap=dmat_cmap, norm=norm2, extent=im_extent)
 
-    def __call__(self, time, der_type=4):
-        idx = np.searchsorted(self.fluxes['tvec'], time)
-        flux = self.fluxes['values'][idx]
-        self.t = time
-        self.ax.images.clear()
-        self.ax.collections.clear()
-        self.ax.imshow(flux, origin='bottom',
-                       # extent=self.coord.extent
-                       )
-        self.ax.contour(flux, np.sqrt(np.linspace(0, 1.0, 20)),
-                        # extent=self.coord.extent
-                        )
-
-        atan2 = prepare_mag_data(flux[:, :])
-        bper, bpar, bpar_dense, bper_dense = generate_anizo_matrix(self.coord, atan2, der_type)
-
-        self.deriv1 = bper_dense.reshape(self.nx * self.ny, 3, 3)[:, :, :]
-        self.deriv2 = bpar_dense.reshape(self.nx * self.ny, 3, 3)[:, :, :]
-        # Central pixel index
-        ind = int(self.coord.ny / 2 * self.coord.nx + self.coord.nx / 2)
-
-        self.slices, rows, cols, = self.deriv1.shape
-        sliced = self.deriv1[ind, :, :]
-        self.im1 = self.ax2[0].imshow(sliced, cmap='Greys')
-
-        self.slices, rows, cols, = self.deriv2.shape
-        sliced = self.deriv2[ind, :, :]
-        self.im2 = self.ax2[1].imshow(sliced, cmap='Greys')
-
-        self.ax2[0].texts.clear()
-        self.ax2[1].texts.clear()
         self.annotate1_list = {}
         self.annotate2_list = {}
+        ra = [-grid.dr, 0, grid.dr]
+        za = [grid.dz, 0, -grid.dz]
+        for i, j in np.ndindex((3, 3)):
+            self.annotate1_list[(i, j)] = self.ax2[0].annotate('', xy=(ra[j], za[i]), ha='center', va='center')
+            self.annotate2_list[(i, j)] = self.ax2[1].annotate('', xy=(ra[j], za[i]), ha='center', va='center')
 
-        for i, j in np.ndindex(self.deriv1[ind, :, :].shape):
-            # print(ind, i, j)
-            annotate1_tmp = self.ax2[0].annotate('{:0.2}'.format(self.deriv1[ind, i, j]), (j, i), color='r')
-            annotate2_tmp = self.ax2[1].annotate('{:0.2}'.format(self.deriv2[ind, i, j]), (j, i), color='r')
-            self.annotate1_list[(i, j)] = annotate1_tmp
-            self.annotate2_list[(i, j)] = annotate2_tmp
+        self.ax.pcolormesh(*self.grid.center_mesh , flux)
+        self.ax.contour(*self.grid.center_mesh, flux, levels=contour_levels, colors=contour_colors)
+
+        nr = self.grid.nr
+
+        self.deriv1 = np.zeros((self.grid.size, 3, 3))
+        self.deriv1[nr+1:, 2, 0] = dmat1.diagonal(-nr -1)
+        self.deriv1[nr:, 2, 1] = dmat1.diagonal(-nr)
+        self.deriv1[nr-1:, 2, 2] = dmat1.diagonal(-nr +1)
+        self.deriv1[1:, 1, 0] = dmat1.diagonal(-1)
+        self.deriv1[:, 1, 1] = dmat1.diagonal(0)
+        self.deriv1[:-1, 1, 2] = dmat1.diagonal(1)
+        self.deriv1[:-nr+1, 0, 0] = dmat1.diagonal(nr -1)
+        self.deriv1[:-nr, 0, 1] = dmat1.diagonal(nr)
+        self.deriv1[:-nr-1, 0, 2] = dmat1.diagonal(nr +1)
+
+        self.deriv2 = np.zeros((self.grid.size, 3, 3))
+        self.deriv2[nr+1:, 2, 0] = dmat2.diagonal(-nr -1)
+        self.deriv2[nr:, 2, 1] = dmat2.diagonal(-nr)
+        self.deriv2[nr-1:, 2, 2] = dmat2.diagonal(-nr +1)
+        self.deriv2[1:, 1, 0] = dmat2.diagonal(-1)
+        self.deriv2[:, 1, 1] = dmat2.diagonal(0)
+        self.deriv2[:-1, 1, 2] = dmat2.diagonal(1)
+        self.deriv2[:-nr+1, 0, 0] = dmat2.diagonal(nr -1)
+        self.deriv2[:-nr, 0, 1] = dmat2.diagonal(nr)
+        self.deriv2[:-nr-1, 0, 2] = dmat2.diagonal(nr +1)
 
         plt.tight_layout()
 
         self.fig.canvas.draw()
-        self.fig2.canvas.draw()
+        self.point = self.ax.plot(*grid.centre, 'r+')[0]
+        self.update(*grid.centre)
         return
 
     def update(self, x, y):
         """
         Updates plots for current pixel coordinate
         """
-        self.ax2[0].set_title('Bpar, x={},y={}'.format(x, y))
-        self.ax2[1].set_title('Bper, x={},y={}'.format(x, y))
+        r_idx = np.abs(self.grid.r_center - x).argmin()
+        z_idx = np.abs(self.grid.z_center - y).argmin()
+        r = self.grid.r_center[r_idx]
+        z = self.grid.z_center[z_idx]
+        self.point.set_data(r, z)
 
-        ind = int(y * self.coord.nx + x)
+        self.ax2[0].set_title(f'dmat1, $r_0$={r:.3f}, $z_0$={z:.3f}')
+        self.ax2[1].set_title(f'dmat2, $r_0$={r:.3f}, $z_0$={z:.3f}')
+
+        ind = int(z_idx * self.grid.nr + r_idx)
 
         sliced = self.deriv1[ind, :, :]
         self.im1.set_data(sliced)
-        # self.im1.axes.figure.canvas.draw()
+        self.im1.axes.figure.canvas.draw()
 
         sliced = self.deriv2[ind, :, :]
         self.im2.set_data(sliced)
+        self.im2.axes.figure.canvas.draw()
 
         for i, j in np.ndindex(self.deriv1[ind, :, :].shape):
-            self.annotate1_list[(i, j)].set_text('{:0.2}'.format(self.deriv1[ind, i, j]))
-            self.annotate2_list[(i, j)].set_text('{:0.2}'.format(self.deriv2[ind, i, j]))
+            self.annotate1_list[(i, j)].set_text(f'{self.deriv1[ind, i, j]:0.2f}')
+            self.annotate2_list[(i, j)].set_text(f'{self.deriv2[ind, i, j]:0.2f}')
+        self.fig.canvas.draw()
         self.fig2.canvas.draw()
 
     def onclick(self, event):
         """
         Gets coordinate from the click on the main flux plot
         """
-        # print('Returned indices')
-        # print(event.xdata, event.ydata)
-        # print('mapping back:')
-        x = int(np.round(event.xdata))
-        y = int(np.round(event.ydata))
-        # tx = "Y: {}, X: {}".format(y, x)
-        # print(tx)
-        self.update(x, y)
-
-
-def check_gmat(gmat):
-    """
-    Checks geometry matrix by summing all channels and plotting.
-
-    Parameters
-    ----------
-    gmat : dict
-
-    Returns
-    -------
-    fig : matplotlib.pyplot.figure
-    """
-    raise NotImplementedError('Requires gmat class, grid descritpion in gmat attrs or grid as parameter')
-    fig, ax = plt.subplots()
-    sgmat = gmat.sum(0)
-    s = ax.imshow(sgmat, origin='bottom')
-    plt.colorbar(s)
-    ax.set_ylabel('y grid [px]')
-    ax.set_xlabel('x grid [px]')
-    plt.show()
-    return fig
+        x = event.xdata
+        y = event.ydata
+        if x is None or y is None:  # handle clicks outside axes
+            pass
+        else:
+            self.update(x, y)
+        return

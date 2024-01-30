@@ -6,13 +6,17 @@ Changes
  - Default MFR class uses cho_factor and cho_solve from scipy
  - reworked format of line of sights, updated gmat computation functions
  - line of sight saving to a single json file
+ - new function for calculation of anisotropic derivative matrix
 
 New Features
 ------------
+ - tutorial for checking anisotropic derivative matrix
  - tests for line of sight saving and loading
+ - tests for derivative matrix computation
 
 Fixes
 -----
+ - updated derivative matrix checker
 
 Version 1.3 (21.07.2023)
 =======================

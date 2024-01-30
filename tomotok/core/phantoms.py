@@ -6,13 +6,52 @@ Contains functions that can create emissivity phantoms.
 
 Both isotropic one or based on the shape of flux surfaces.
 """
+from typing import Union, Tuple
+
 import numpy as np
+
+
+def elliptical_flux(radial_num: int, vertical_num: int, span: Union[float, Tuple[float, float]] = 1.5) -> np.ndarray:
+    """
+    Creates matrix of artificial flux surfaces with elliptical shape.
+
+    Minimum values at the border are determined by the span parameter.
+
+    Parameters
+    ----------
+    radial_num : int
+        number of nodes along radial axis
+    vertical_num : int
+        number of nodes along vertical axis
+    span : float or tuple of two floats, optional
+        flux value at the center of grid edge
+        if tuple, first value is for radial axis, second for vertical
+    
+    Returns
+    -------
+    numpy.ndarray
+        Matrix with generated fluxes
+    """
+    if isinstance(span, tuple):
+        if len(span) != 2:
+            raise ValueError('Span parameter must be float or tuple of two floats.')
+        span_r, span_v = span
+    else:
+        span_r = span_v = span
+    radial = np.linspace(-span_r, span_r, radial_num)
+    vertical = np.linspace(-span_v, span_v, vertical_num)
+    radial, vertical = np.meshgrid(radial, vertical)
+    fluxes = np.sqrt(radial ** 2 + vertical ** 2)
+    return fluxes
 
 
 def iso_psi(nx, ny, span=1.5):
     """
     Creates matrix of artificial isotropic psi profile with border values for
     each axis equal to span.
+
+    .. deprecated:: 2.0
+        Use :func:`elliptical_flux` instead.
 
     Parameters
     ----------
@@ -121,6 +160,10 @@ def polar_phase(x, num=3, shift=0):
 def islands(psi, w=.01, lim=1, amp=1, cen=0.4, num=3, shift=0):
     """
     Creates island like phantom from given psi profile. See references for gauss and polar_phase.
+
+    See also
+    --------
+    gauss, polar_phase
     """
     res = gauss(psi, w, lim, amp, cen)
     res = polar_phase(res, num, shift)
