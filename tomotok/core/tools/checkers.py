@@ -14,7 +14,7 @@ Checking anisotropic derivative matrix computed from DataArray with magnetic flu
 >>> grid = RegularGrid(50, 100, (0.5, 1), (-0.5, 0.5))
 >>> magnetic_flux = Tokamak.download_mag_field(...)
 >>> flux = Tokamak.interpolate_mag_field(magnetic_flux, grid, time)
->>> checker = DerivMatChecker(grid)
+>>> checker = AnisotropicDerivativeChecker(grid)
 >>> dmat_par = anisotropic_derivative_matrix(grid, flux, 'parallel')
 >>> dmat_per = anisotropic_derivative_matrix(grid, flux, 'perpendicular')
 >>> checker(flux, dmat_par, dmat_per)
@@ -27,7 +27,7 @@ from scipy import sparse
 from tomotok.core.geometry import RegularGrid
 
 
-class DerivMatChecker(object):
+class AnisotropicDerivativeChecker(object):
     """
     Computes anisotropic matrix for a time slice from provided magnetic flux and plots its components.
     Supports interactive selection of matrix element using mouse.
