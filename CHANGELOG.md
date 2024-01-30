@@ -10,7 +10,9 @@ Changes
 
 New Features
 ------------
+ - tutorial for checking anisotropic derivative matrix
  - tests for line of sight saving and loading
+ - tests for derivative matrix computation
 
 Fixes
 -----
