@@ -2,342 +2,65 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Contains functions for derivative matrix computation.
-
- - new functions (isotropic) derivative_matrix and laplace_matrix
- - compute_aniso_dmats and compute_iso_dmats takes care of obtaining
-   flux dependent or flux independent derivative matrices,
- - prepare_mag_data is an auxiliary function to calculate magnetic flux gradients and
- - px_norm is a simple auxiliary function to calculate norms for coefficients
+Handles computation of derivative matrices used for regularization in MFR algorithm.
 """
-from warnings import warn
-
 import numpy as np
 from scipy import sparse
-from scipy.sparse import spdiags, eye
 
 from .geometry import RegularGrid
 
 
-def compute_iso_dmats(grid, derivatives=[1, 2], mask=None, compensate_edges=False):
+def reduce_matrix(mat: sparse.spmatrix, mask: np.ndarray) -> sparse.spmatrix:
     """
-    Computes isotropic derivative matrix pairs for given differential schemes.
-
-    .. deprecated :: 2.0
+    Creates reduced matrix by cutting out rows and columns representing unwanted nodes.
 
     Parameters
     ----------
-    grid : RegularGrid
-    mask : np.ndarray, optional
-    derivatives : list of int/str, optional
+    mat : scipy.sparse.spmatrix
+        matrix to be reduced
+    mask : numpy.ndarray of bool
+        mask array for selecting desired nodes, True for nodes to keep
+        must be 1D or 2D, size must match grid size (# rows or # columns)
 
     Returns
     -------
-    list of dmat pairs
+    scipy.sparse.csc_matrix
+        reduced matrix
     """
-    warn("compute_iso_dmats is deprecated, use derivative_matrix instead", DeprecationWarning)
-    if mask is None:
-        mask = np.ones(grid.size, dtype=bool)
-    if isinstance(derivatives, int):
-        derivatives = [derivatives]
-    dmats = []
-    for d in derivatives:
-        dmats.append(generate_iso_dmat(grid, derivative=d))
-    dmats_red = reduce_dmats(dmats, mask.flatten(), compensate_edges)
-    return dmats_red
+    if mask.ndim == 2:
+        mask = mask.flatten()
+    elif mask.ndim > 2:
+        raise ValueError('Mask must be 1D or 2D array.')
+    if mask.size != mat.shape[0]:
+        raise ValueError('Mask size does not match derivative matrix size.')
+    mat = mat[mask, :][:, mask]
+    return mat
 
 
-def compute_aniso_dmats(grid, magflux, derivative=4, mask=None, compensate_edges=False):
+def compensate_matrix(mat: sparse.spmatrix) -> sparse.spmatrix:
     """
-    Prepares matrix of finite differences, magnetic configuration dependent or
-    fixed simple differences. First or second derivative can be used
-
-    .. deprecated :: 2.0
+    Subtracts from diagonal so that sum of each row is zero.
 
     Parameters
     ----------
-    grid : RegularGrid
-        A reconstruction grid
-    magflux : numpy.ndarray
-        values of psi normalized mapped to grid
-    mask : numpy.ndarray, optional
-        bool mask
-    derivative : int in {1,2,3,4}
-        specifies type of derivative scheme, default is 4
+    mat : scipy.sparse.spmatrix
+        matrix to be compensated
 
     Returns
     -------
-    tuple of scipy.sparse.csrmatrix pairs
-        derivative matrix
+    scipy.sparse.csc_matrix
+        compensated matrix
     """
-    warn("compute_aniso_dmats is deprecated, use anisotropic_derivative_matrices instead", DeprecationWarning)
-    if mask is None:
-        mask = np.ones(grid.size, dtype=np.bool)
-    dr = grid.dr
-    dz = grid.dz
-    npix = grid.nodes_num
-    bmat = None
-    atan2 = prepare_mag_data(magflux)
-    bpar1, bper1, foo, bar = generate_anizo_matrix(grid, atan2, 1)
-    bpar2, bper2, foo, bar = generate_anizo_matrix(grid, atan2, 2)
-
-    [br, bz] = generate_iso_dmat(grid, derivative)
-    bmat = [bpar1, bper1, bpar2, bper2]
-    # correction of boundary conditions => zero derivative on borders !!
-    # + ensure positive definiteness
-    for i in range(4):
-        bmat[i] = bmat[i] - spdiags(bmat[i].sum(axis=1).T, 0, npix, npix)
-        ind = np.array(abs(bmat[i]).sum(axis=1).T == 0)
-        corr = spdiags(ind, 0, npix, npix)*(br*dr+bz*dz) * spdiags(ind, 0, npix, npix)
-        # FIXME: remove 'correction'
-        bmat[i] = bmat[i] + corr  # correction adds standard derivatives, probably not necessary
-    bmat = [(bmat[0], bmat[1]), (bmat[2], bmat[3])]
-    dmats_red = reduce_dmats(bmat, mask.flatten(), compensate_edges)
-    return dmats_red
+    row_sum = np.array(mat.sum(1)).flatten()
+    row_sum_diag = sparse.diags([row_sum], [0], format='csc')
+    mat = mat - row_sum_diag
+    return mat
 
 
-def prepare_mag_data(flux):
-    """
-    Calculates gradient map of magnetic flux function Psi(R,z) and returns
-    arcus tangens of dPsi_y/-dPsi_x that is a suitable funciton for anizotropic
-    diffusion matrix calculation
-
-    Parameters
-    ----------
-    flux : numpy.ndarray
-        array of Psi(R,z) evolution, with axes (z, R, t)
-
-    Returns
-    ------
-    numpy.ndarray
-        arcus tangens of Psi gradient
-    """
-    vgrad = np.gradient(flux[:, :])
-    atan2 = np.arctan2(vgrad[1], -vgrad[0])
-    return atan2
-
-
-def px_norm(direc):
-    """
-    Computed (normalised?) distance between centers of nodes.
-    """
-    # FIXME: assumes square grid
-    dn = np.sqrt(2)
-    mod = np.asarray([s % 2 for s in direc])
-    norms = np.zeros(np.shape(direc))
-    norms[mod == 0] = 1
-    norms[mod == 1] = dn
-    return norms
-
-
-def generate_anizo_matrix(grid, atan2, derivative):
-    """
-    Write prepared directions atan2 into the derivative matrix.
-    Main magic of this algorithm. Rewrite arctan into the directions
-    and decompose directions to parallel and oblique direction.
-
-    Parameters
-    ----------
-    grid : RegularGrid
-        Object with pixel grid gridinates
-    atan2 : numpy.ndarray
-        3D array of arcus tangents of Psi(R,z) evolution
-    derivative : int
-        derivative type identificator
-
-    Returns
-    -------
-    bper : scipy.sparse
-        sparse matrix with perpendicular derivatives
-    bpar : scipy.sparse
-        sparse matrix with parallel derivatives
-    bpar_tmp: numpy.array
-        (optional) dense matrix with parallel derivatives
-    bper_tmp: numpy.array
-        (optional) dense matrix with perpendicular derivatives
-    """
-    # obtain pixel dimensions
-    nx = grid.nr
-    ny = grid.nr
-    npix = grid.nodes_num
-
-    atan2 = atan2.flatten()
-
-    # initiate 9point derivative matrices
-    bper_tmp = np.zeros((npix, 9))
-    bpar_tmp = np.zeros((npix, 9))
-    center_tmp = 4
-
-    # check for nans, potentially useful if vessel/separatrix truncated is supplied
-    ind = ~np.isnan(atan2)
-    atan2 = atan2[ind]
-    n_ind = len(atan2)
-
-    # decomposition of flux contour direction to two neighboring pixels
-    for k in [0, 1]:
-        # pixel with maximum contribution and px with second maximum contribution (45deg neighbour)
-        direction = np.int_(np.mod(np.floor(atan2 / (np.pi/4) + k), 8))
-
-        # array of reference indices
-        dir_ = np.array((-1, 2, 3, 4, 1, -2, -3, -4), dtype=int)  # F like
-        # dir_ = np.array((-3, -2, 1, 4, 3, 2, -1, -4), dtype=int)  # C like
-        # C  [-4, -3, -2]       F  [-4, -1,  2]
-        #    [-1,  0,  1]          [-3,  0,  3]
-        #    [ 2,  3,  4]          [-2,  1,  4]
-        # dir_ = np.array((-1, ny-1, ny, ny+1, 1, -ny+1, -ny, -ny-1), dtype=np.int)  # is compressed form
-
-        next_ = np.squeeze(dir_[direction])
-
-        # saw function, MAIN MAGIC, first steps to find projections of
-        # the direction to the two neighboring pixels
-
-        arelativ = np.abs(np.pi/4 - np.mod(atan2 + np.pi/4, np.pi/2))
-
-        # obligue direction, zoom => ugly hack (works :)
-        k1 = np.sin(2*arelativ)
-        # direction paralel with axes
-        k2 = np.cos(2*arelativ)
-
-        a = np.zeros(n_ind)
-        ind_mod2 = np.bool_(np.mod(direction, 2))
-        a[ind_mod2] = k1[ind_mod2]
-        a[~ind_mod2] = k2[~ind_mod2]
-        forind = center_tmp + next_
-        backind = center_tmp - next_
-
-        # Assign a value to specific pixels depending on the desired difference scheme:
-        # 1 and 2 are just depending on the axis direction, 3 is second derivative and
-        # 4 is central derivative
-        # normalise pixels
-
-        if derivative == 1:
-            bper_tmp[ind, forind] = a/px_norm(forind)
-        elif derivative == 2:
-            bper_tmp[ind, backind] = a/px_norm(backind)
-        elif derivative == 3:
-            bper_tmp[ind, forind] = a/px_norm(forind)
-            bper_tmp[ind, backind] = a/px_norm(backind)
-        elif derivative == 4:
-            bper_tmp[ind, forind] = a/px_norm(forind)
-            bper_tmp[ind, backind] = -a/px_norm(backind)
-        else:
-            raise ValueError("Bad derivative type number, allowed {1,2,3,4}")
-
-    # Constructing matrix with directions parallel to the magnetic field
-    # from the matrix with directions perpendicular to magnetic field by essentially rotating
-    # the outer pixels by 90deg
-    ind = np.arange(8)
-    pt1 = dir_[np.mod(ind, 8)]
-    pt2 = dir_[np.mod(ind+2, 8)]
-    # rotate directions by 90deg
-    bpar_tmp[:, center_tmp + pt2[ind]] = bper_tmp[:, center_tmp + pt1[ind]]
-
-    # normalisation and treatment for the central pixel: -1,
-    # except for central derivative where it is zero
-
-    if derivative in (1, 2, 3):
-        bper_tmp = sparse.spdiags(1 / (np.sum(bper_tmp, 1) + 0.000001), 0, npix, npix
-                                  ) * bper_tmp
-        bpar_tmp = sparse.spdiags(1 / (np.sum(bpar_tmp, 1) + 0.000001), 0, npix, npix
-                                  ) * bpar_tmp
-        bper_tmp[:, center_tmp] = -1
-        bpar_tmp[:, center_tmp] = -1
-    elif derivative == 4:
-        bper_tmp = sparse.spdiags(1 / (np.sum(np.abs(bper_tmp), 1)), 0, npix, npix
-                                  ) * bper_tmp
-        bpar_tmp = sparse.spdiags(1 / (np.sum(np.abs(bpar_tmp), 1)), 0, npix, npix
-                                  ) * bpar_tmp
-    else:
-        raise ValueError("Bad derivative type number, allowed {1,2,3,4}")
-    # final conversion to npix x npix diagonal sparse matrices used in the calculation
-    # bpar = sparse.spdiags(bpar_tmp.T, (ny+1, ny, ny-1, 1, 0, -1, -ny+1, -ny, -ny-1), npix, npix).T
-    # bper = sparse.spdiags(bper_tmp.T, (ny+1, ny, ny-1, 1, 0, -1, -ny+1, -ny, -ny-1), npix, npix).T
-    bpar = sparse.spdiags(bpar_tmp.T, (nx + 1, 1, -nx + 1, nx, 0, -nx, nx - 1, -1, -nx - 1), npix, npix).T
-    bper = sparse.spdiags(bper_tmp.T, (nx + 1, 1, -nx + 1, nx, 0, -nx, nx - 1, -1, -nx - 1), npix, npix).T
-    bpar = sparse.csc_matrix(bpar)
-    bper = sparse.csc_matrix(bper)
-    return bpar, bper, bpar_tmp, bper_tmp
-
-
-def generate_iso_dmat(grid: RegularGrid, derivative=4):
-    """
-    Computes isotropic derivative matrix.
-
-    .. deprecated ::
-
-    Parameters
-    ----------
-    grid : RegularGrid
-    derivative : list of int
-
-    Returns
-    -------
-    scipy.sparse.csc_matrix, scipy.sparse.csc_matrix
-    """
-    warn("This function is deprecated, use derivative_matrix instead", DeprecationWarning)
-    npix = grid.size
-    nx = grid.nr
-    # diagonal
-    diam = eye(npix, npix)
-    diar = spdiags((np.ones((1, npix))), 1, npix, npix, format='csc')
-    # to reference right nearest neighbors
-    dial = spdiags((np.ones((1, npix))), -1, npix, npix, format='csc')
-    # reference left nearest neighbors
-    diao = spdiags((np.ones((1, npix))), nx, npix, npix, format='csc')
-    # reference upper nearest neighbors
-    diau = spdiags((np.ones((1, npix))), -nx, npix, npix, format='csc')
-
-    # selection of suitable derivative
-    if derivative == 1:
-        br = -diam + dial
-        bz = -diam + diao
-    elif derivative == 2:
-        br = diam - diar
-        bz = diam - diau
-    elif derivative == 3:
-        br = dial - 2*diam + diar
-        bz = diao - 2*diam + diau
-    elif derivative == 4:
-        br = dial - diar
-        bz = diao - diau
-    br = br / grid.dr
-    bz = bz / grid.dz
-    return br, bz
-
-
-def reduce_dmats(dmats, idx, compensate_edges=False):
-    """
-    Creates reduced derivative matrices by cutting out rows and columns representing unwanted nodes.
-
-    Parameters
-    ----------
-    dmats : tuples of scipy.sparse.csr_matrix
-        tuple containing full derivative matrices
-    idx : numpy.ndarray of bool
-        array or mask array to select desired nodes
-
-    Returns
-    -------
-    list of scipy.sparse.csr_matrix pairs
-        derivative matrices with removed rows and columns representing nodes outside the bdr polygon (vacuum vessel)
-    """
-    dmats_red = []
-    for pair in dmats:
-        s1 = pair[0][idx, :][:, idx]
-        s2 = pair[1][idx, :][:, idx]
-        if compensate_edges:
-            row_sum1 = np.array(s1.sum(1)).flatten()
-            row_sum_diag = sparse.diags([row_sum1], [0], format='csr')
-            s1 = s1 - row_sum_diag
-            row_sum2 = np.array(s2.sum(1)).flatten()
-            row_sum_diag = sparse.diags([row_sum2], [0], format='csr')
-            s2 = s2 - row_sum_diag
-        pair_red = (s1, s2)
-        dmats_red.append(pair_red)
-    return dmats_red
-
-
-def derivative_matrix(grid: RegularGrid, direction: str, scheme: str = 'forward', mask: np.ndarray = None, compensate_edges=False):
+def derivative_matrix(
+        grid: RegularGrid, direction: str, scheme: str = 'forward', 
+        mask: np.ndarray = None, compensate_edges=True
+    ) -> sparse.csc_matrix:
     """
     Creates a derivative matrix using numerical differences
 
@@ -424,22 +147,14 @@ def derivative_matrix(grid: RegularGrid, direction: str, scheme: str = 'forward'
 
     # normalisation
     dmat = dmat / step
-
     if mask is not None:
-        if mask.ndim == 2:
-            mask = mask.flatten()
-        elif mask.ndim > 2:
-            raise ValueError('Mask must be 1D or 2D array.')
-        dmat = dmat[mask, :][:, mask]
+        dmat = reduce_matrix(dmat, mask)
     if compensate_edges:
-        row_sum = np.array(dmat.sum(1)).flatten()
-        row_sum_diag = sparse.diags([row_sum], [0], format='csr')
-        dmat = dmat - row_sum_diag
-
+        dmat = compensate_matrix(dmat)
     return dmat
 
 
-def laplace_matrix(grid: RegularGrid, mask=None, compensate_edges=False, diagonals=True):
+def laplace_matrix(grid: RegularGrid, mask=None, compensate_edges=True, diagonals=True) -> sparse.csc_matrix:
     """
     Creates sparse laplace matrix.
 
@@ -480,100 +195,106 @@ def laplace_matrix(grid: RegularGrid, mask=None, compensate_edges=False, diagona
         lmat -= 4 / diagonal_distance * center
 
     if mask is not None:
-        if mask.ndim == 2:
-            mask = mask.flatten()
-        elif mask.ndim > 2:
-            raise ValueError('Mask must be 1D or 2D array.')
-        lmat = lmat[mask, :][:, mask]
-
+        lmat = reduce_matrix(lmat, mask)
     if compensate_edges:
-        row_sum = np.array(lmat.sum(1)).flatten()
-        row_sum = sparse.diags([row_sum], [0], format='csr')
-        lmat = lmat - row_sum
-
+        lmat = compensate_matrix(lmat)
     return lmat
 
 
-def get_index_shift(col_num: int, direction: str, distance: int = 1) -> int:
+def anisotropic_derivative_matrix(
+        grid: RegularGrid, fluxes: np.ndarray, 
+        direction='parallel', scheme='forward',
+        mask: np.ndarray = None, compensate_edges=True
+    ) -> sparse.csc_matrix:
     """
-    Computes the index difference of a node neighbor on a flatten grid.
+    Computes derivative matrix with varying direction based on flux surfaces shapes.
 
-    Parameters
-    ----------
-    col_num : int
-        number of columns in reconstruction grid
-    direction : str
-        Determines one of the 8 possible directions that can be used.
-        Specified using the over edge neighbor 'right', 'top', 'left', 'bottom' or
-        combination over corner directions like 'top-left'
-    distance : int, optional
-        expressed in number of nodes, by default 1
-
-    Returns
-    -------
-    int
-        relative index of neighbor in flattened grid
-    """
-    if direction == 'right':
-        shift = distance
-    elif direction == 'top-right':
-        shift = distance * (1 + col_num)
-    elif direction == 'top':
-        shift = col_num * distance
-    elif direction == 'top-left':
-        shift = distance * (-1 + col_num)
-    elif direction == 'left':
-        shift = - distance
-    elif direction == 'bottom-left':
-        shift = distance * (-1 - col_num)
-    elif direction == 'bottom':
-        shift = - distance * col_num
-    elif direction == 'bottom-right':
-        shift = distance * (1 - col_num)
-    return shift
-
-
-def anisotropic_derivative_matrices(grid: RegularGrid, magnetic_flux, mask=None, compensate_edges=False):
-    """
-    Computes anisotropic derivative matrices.
-
-    Uses forward and backward derivative schemes for both parallel and perpendicular directions.
+    Uses direction of gradient to distribute contribution to two neighboring nodes.
+    These are designated as previous and next as the direction rotates.
+    The weight of next node is equal to remnant of direction angle division by 1.
+    The weight of previous node is equal to 1 minus the weight of next node.
 
     Parameters
     ----------
     grid : RegularGrid
-        A reconstruction grid
-    magnetic_flux : numpy.ndarray
-        values of psi normalized interpolated to grid
-    mask : numpy.ndarray, optional
-        bool mask
-    compensate_edges : bool, optional
-        if True, subtracts row sum from diagonal, by default False
+        Reconstruction grid definition
+    fluxes : numpy.ndarray
+        Matrix with magnetic flux values, shape has to match grid
+    mask : numpy.ndarray of bool, optional
+        _description_, by default None
+    direction : str, optional
+        _description_, by default 'parallel'
+    scheme : str, optional
+        derivative scheme used, by default 'forward'
+         - forward is in the direction of positive angle i.e. counter clockwise
+         - backward is in the direction of negative angle i.e. clockwise
 
     Returns
     -------
-    list of scipy.sparse.csrmatrix
-        list of anistropic derivative matrices
-        [parallel forward, perpendicular forward, parallel backward, perpendicular backward]
+    scipy.sparse.csc_matrix
+        _description_
     """
-    vgrad = np.gradient(magnetic_flux[:, :])
-    atan2 = np.arctan2(vgrad[1], -vgrad[0])
-    bpar1, bper1, foo, bar = generate_anizo_matrix(grid, atan2, 1)  # forward
-    bpar2, bper2, foo, bar = generate_anizo_matrix(grid, atan2, 2)  # backward
+    if grid.shape != fluxes.shape:
+        raise ValueError('Grid shape does not match fluxes shape.')
+    if scheme not in ['forward', 'backward']:
+        raise ValueError('Scheme must be either `forward` or `backward`.')
+    if direction not in ['parallel', 'perpendicular']:
+        raise ValueError('Direction must be either `parallel` or `perpendicular`.')
 
-    dmat_list = [bpar1, bper1, bpar2, bper2]
-    
-    for i, dmat in enumerate(dmat_list):
-        if mask is not None:
-            if mask.ndim == 2:
-                mask = mask.flatten()
-            elif mask.ndim > 2:
-                raise ValueError('Mask must be 1D or 2D array.')
-            dmat = dmat[mask, :][:, mask]
-        if compensate_edges:
-            row_sum = np.array(dmat.sum(1)).flatten()
-            row_sum = sparse.diags([row_sum], [0], format='csr')
-            dmat = dmat - row_sum
-        dmat_list[i] = dmat
+    grad_z, grad_r = np.gradient(fluxes, grid.z_center, grid.r_center)
+    atan2 = np.arctan2(grad_z, grad_r)  # direction angle of flux surface gradient in radians
+    atan_mod = (atan2.flatten() - atan2.min()) / (2 * np.pi) * 8  # rescale atan2 to <0, 8) range
+    # atan_mod = atan_mod.flatten() # % 8  # FIXME: remove?
 
-    return dmat_list
+    rotation = 0
+    if direction == 'parallel':
+        rotation += 2  # rotate gradient by 90 degrees (2 * pi/4) to get tangent
+    if scheme=='backward':
+        rotation += 4  # rotate directions by 180 degrees (4 * pi/4)
+
+    directions_prev = (atan_mod + rotation) % 8
+    directions_prev = np.floor(directions_prev)
+    directions_next = (directions_prev + 1) % 8
+
+    weight_next = (atan_mod % 1).flatten()
+    weight_prev = 1 - weight_next
+
+    # array to store diagonals passed to sparse constructor
+    diagonals = np.zeros((grid.size, 9))
+    for i in range(8):
+        mask_prev = directions_prev == i
+        mask_next = directions_next == i
+        diagonals[mask_prev, i] += weight_prev[mask_prev]
+        diagonals[mask_next, i] += weight_next[mask_next]
+
+    # normalize by center distance
+    horizontal = grid.dr
+    vertical = grid.dz
+    diagonal = (horizontal**2 + vertical**2)**0.5
+    diagonals[:, [1, 3, 5, 7]] /= diagonal  # lb, rb, lu, ru
+    diagonals[:, [0, 4]] /= horizontal  # l, r
+    diagonals[:, [2, 6]] /= vertical  # b, u
+    # center node
+    sum_node = diagonals.sum(axis=1)
+    diagonals[:, 8] = - sum_node
+
+    # order of directions from angle to relative index to central pixel
+    # left, lower left, lower, lower right, right, upper right, upper, upper left, central
+    offsets = (-1, -grid.nr -1, -grid.nr, -grid.nr +1, 1, grid.nr +1, grid.nr, grid.nr -1, 0)
+    diagonals_cropped = (
+        diagonals[1:, 0],  # left
+        diagonals[grid.nr+1:, 1],  # lower left
+        diagonals[grid.nr:, 2],  # lower
+        diagonals[grid.nr-1:, 3],  # lower right
+        diagonals[:-1, 4],  # right
+        diagonals[:-grid.nr-1, 5],  # upper right
+        diagonals[:-grid.nr, 6],  # upper
+        diagonals[:-grid.nr+1, 7],  # upper left
+        diagonals[:, 8],  # center
+    )
+    derivative = sparse.diags(diagonals_cropped, offsets, format='csc', shape=(grid.size, grid.size))
+    if mask is not None:
+        derivative = reduce_matrix(derivative, mask)
+    if compensate_edges:
+        derivative = compensate_matrix(derivative)
+    return derivative

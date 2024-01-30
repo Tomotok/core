@@ -2,7 +2,7 @@
 #
 # Licensed under the EUPL-1.2 or later.
 from os import path
-from .derivative import compute_aniso_dmats, compute_iso_dmats
+from .derivative import derivative_matrix, laplace_matrix, anisotropic_derivative_matrix
 from .geometry import *
 from .inversions import *
 from .io import *
