@@ -9,7 +9,6 @@ from warnings import warn
 
 import numpy as np
 import scipy.sparse as sparse
-from scipy.sparse.linalg import spsolve
 
 from .mfr import Mfr
 
@@ -200,33 +199,3 @@ class Fixt(Mfr):
             stats_list.append(stats)
 
         return res, stats_list
-
-
-class CholmodFixt(Fixt):
-    """
-    Cholmod version of fixed parameter MFR
-    Requires scikit sparse to be installed in order to initialize properly.
-
-    Uses sksparse.cholmod.cholesky to solve the inversion problem
-    """
-    def __init__(self):
-        """
-        Executes standard initialization and imports sksparse.cholmod
-        """
-        super().__init__()
-        from sksparse.cholmod import cholesky
-        self.cholesky = cholesky
-
-    def invert(self, a, b):
-        r"""
-        Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using sksparse.cholmod.cholesky
-
-        Parameters
-        ----------
-        a : scipy.sparse.csr_matrix
-            square and positive definite matrix
-        b : array_like
-            right hand side vector
-        """
-        factor = self.cholesky(a)
-        return factor(b)
