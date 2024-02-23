@@ -12,7 +12,7 @@ from .mfr import Mfr
 from .fixed import Fixt
 
 
-class Jaxed(object):
+class CholeskyJax(object):
     """
     Template class overwriting inversion solving with jax.
     Requires jax to be installed in order to initialize properly.
@@ -45,11 +45,44 @@ class Jaxed(object):
         return np.copy(x)
 
 
-class JaxedMfr(Jaxed, Mfr):
+class JaxedMfr(CholeskyJax, Mfr):
     pass
 
 
-class JaxedFixt(Jaxed, Fixt):
+class JaxedFixt(CholeskyJax, Fixt):
+    pass
+
+
+class Jax(object):
+    """
+    Template class overwriting
+    inversion solving with jax.
+    Requires jax to be installed in order to initialize properly.
+
+    Uses jax.numpy.solve for inversion
+    """
+    def __init__(self) -> None:
+        from jax.numpy.linalg import solve
+        self.jax_solve = solve
+
+    def invert(self, a: Union[ArrayLike, csr_matrix], b: ArrayLike) -> np.ndarray:
+        r"""
+        Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using jax.numpy.linalg.solve
+
+        Parameters
+        ----------
+        a : array_like
+            square and positive definite matrix
+        b : array_like
+            right hand side vector
+        """
+        if isinstance(a, (csr_matrix, csc_matrix)):
+            a = a.toarray()
+        x = self.jax_solve(a, b)
+        return np.copy(x)
+
+
+class JaxMfr(Jax, Mfr):
     pass
 
 
