@@ -9,6 +9,8 @@ It is a simplified form of wavelet-vaguelette decomposition algorithm by R. Nguy
 .. [BOB2] R. Nguyen van Yen et al., Nucl. Fusion 52 (2011): 013005
 """
 import warnings
+from pathlib import Path
+from typing import Union
 
 import h5py
 import numpy as np
@@ -29,8 +31,6 @@ class Bob(object):
         :math:`\mathbf{b}_i` basis vectors of reconstruction plane
     dec_mat : scipy.sparse.csr_matrix
         :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
-    dec_mat_normed : scipy.sparse.csr_matrix
-        normalised decomposed matrix, deprecated v1.3
     norms : numpy.ndarray
         node norms used in thresholding
     """
@@ -103,7 +103,7 @@ class Bob(object):
         c = cho_solve(factor, b, check_finite=False)
         return sparse.csr_matrix(c)
 
-    def __call__(self, data, gmat=None, thresholding=None, **kw):
+    def __call__(self, data: np.ndarray, gmat: sparse.csr_matrix = None, thresholding=None, **kw) -> np.ndarray:
         """
         Decomposes geometry matrix and projects images
 
@@ -133,7 +133,7 @@ class Bob(object):
         res = self.basis @ coeffs  # result in node basis
         return res
 
-    def save_decomposition(self, floc, description=''):
+    def save_decomposition(self, floc: Union[str, Path], description: str = '') -> None:
         """
         Saves decomposition matrix and basis to hdf file. Norms are also included if calculated.
 
@@ -157,7 +157,7 @@ class Bob(object):
             if self.norms is not None:
                 f.create_dataset('norms', data=self.norms)
     
-    def load_decomposition(self, floc):
+    def load_decomposition(self, floc: Union[str, Path]) -> None:
         """
         Loads decomposed matrix and basis from an HDF file.
 
@@ -177,9 +177,9 @@ class Bob(object):
                 self.norms = None
         return
 
-    def normalise(self, precision=1e-6):
+    def normalise(self, precision: float = 1e-6) -> None:
         """
-        Computes normalised decomposition matrix.
+        Computes normalisation factors for decomposition matrix.
 
         Parameters
         ----------
@@ -192,20 +192,9 @@ class Bob(object):
         norms = np.zeros(kappa.size)
         norms[idx] = (1 / kappa[idx])
         self.norms = norms[:, None]  # change to expected shape
+        return
 
-    @property
-    def dec_mat_normed(self):
-        """
-        .. deprecated:: 1.3
-        """
-        warnings.warn('dec_mat_normed was deprecated in v1.3', DeprecationWarning)
-        if self.norms is None:
-            return None
-        else:
-            return self.dec_mat.multiply(sparse.csr_matrix(self.norms[:, 0]))
-
-
-    def thresholding(self, image, c: int, precision: float = 1e-6, conv: float = 1e-9):
+    def thresholding(self, image, c: int, precision: float = 1e-6, conv: float = 1e-9) -> np.ndarray:
         """
         Applies thresholding method to provided image.
 
