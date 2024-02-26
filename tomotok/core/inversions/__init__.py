@@ -16,4 +16,4 @@ from .lame import SvdFastAlgebraic, GevFastAlgebraic
 from .sksparse import CholmodMfr, CholmodFixt, CholmodBob
 from .mfr import Mfr
 from .fixed import Fixt
-from .jax import JaxedMfr, JaxedFixt, JaxedBob
+from .jax import CholeskyJaxBob, CholeskyJaxMfr, CholeskyJaxFixt, JaxMfr, JaxFixt

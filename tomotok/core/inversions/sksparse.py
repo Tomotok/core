@@ -16,9 +16,9 @@ class Cholmod(object):
         """
         Executes standard initialization and imports sksparse.cholmod
         """
-        super().__init__()
         from sksparse.cholmod import cholesky
         self.cholesky = cholesky
+        super().__init__()
 
     def invert(self, a : sparse.spmatrix, b):
         r"""
@@ -50,12 +50,19 @@ class CholmodBob(Bob):
     Uses sksparse.cholmod.cholesky to solve the decomposition
     Requires positive definite symmetrized geometry matrix in reconstruction plane basis.
     """
+    def __init__(self):
+        """
+        Executes standard initialization and imports sksparse.cholmod
+        """
+        from sksparse.cholmod import cholesky, CholmodNotPositiveDefiniteError
+        self._cholesky = cholesky
+        self._NotPositiveDefiniteError = CholmodNotPositiveDefiniteError
+        super().__init__()
 
     def compute_coefficients(self, a: sparse.spmatrix, solver_kw: dict = None) -> sparse.csr_matrix:
-        from sksparse.cholmod import cholesky, CholmodNotPositiveDefiniteError
         try:
-            factor = cholesky(a, **solver_kw)
-        except CholmodNotPositiveDefiniteError:
+            factor = self._cholesky(a, **solver_kw)
+        except self._NotPositiveDefiniteError:
             raise ValueError('Symmetrized matrix was not positive definite. Try increasing regularisation factor.')
         b = sparse.eye(a.shape[0])
         c = factor(b)
