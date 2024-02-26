@@ -4,10 +4,85 @@
 """
 Handles computation of derivative matrices used for regularization in MFR algorithm.
 """
+from typing import List, Optional
 import numpy as np
 from scipy import sparse
 
 from .geometry import RegularGrid
+
+
+def all_direction_derivative_matrices(
+        grid: RegularGrid, scheme: str = 'forward', mask: Optional[np.ndarray] = None, compensate_edges=True
+    ) -> List[sparse.csc_matrix]:
+    """
+    Creates derivative matrices for all 8 directions using provided scheme.
+
+    Parameters
+    ----------
+    grid : RegularGrid
+    scheme : str, optional
+        Selects numerical scheme to be used. Can be 'forward', 'backward', 'central', 'second'.
+        The default value is 'forward'.
+    mask : numpy.ndarray, optional
+        A bool mask determining nodes of regular grid to keep, by default None.
+        Rows and columns representing False nodes are removed from derivative matrix.
+        If mask is None, all rows and columns are returned.
+    compensate_edges : bool, optional
+        Subtracts from diagonal so that sum of each row is zero, by default False.
+
+    Returns
+    -------
+    list of scipy.sparse.csc_matrix
+        List of derivative matrices for all 8 directions with following order:
+        right, top-right, top, top-left, left, bottom-left, bottom, bottom-right
+    """
+    derivatives = [
+        derivative_matrix(grid, 'right', scheme, mask, compensate_edges),
+        derivative_matrix(grid, 'top-right', scheme, mask, compensate_edges),
+        derivative_matrix(grid, 'top', scheme, mask, compensate_edges),
+        derivative_matrix(grid, 'top-left', scheme, mask, compensate_edges),
+        derivative_matrix(grid, 'left', scheme, mask, compensate_edges),
+        derivative_matrix(grid, 'bottom-left', scheme, mask, compensate_edges),
+        derivative_matrix(grid, 'bottom', scheme, mask, compensate_edges),
+        derivative_matrix(grid, 'bottom-right', scheme, mask, compensate_edges),
+    ]
+    return derivatives
+
+
+def standard_anisotropic_derivative_matrices(
+        grid: RegularGrid, flux: np.ndarray, mask: Optional[np.ndarray] = None, compensate_edges=True
+    ) -> List[sparse.csc_matrix]:
+    """
+    Creates isotropic derivative matrices for parallel and perpendicular directions.
+
+    Parameters
+    ----------
+    grid : RegularGrid
+    fluxes : numpy.ndarray
+        Matrix with magnetic flux values, shape has to match grid
+    scheme : str, optional
+        Selects numerical scheme to be used. Can be 'forward', 'backward', 'central', 'second'.
+        The default value is 'forward'.
+    mask : numpy.ndarray, optional
+        A bool mask determining nodes of regular grid to keep, by default None.
+        Rows and columns representing False nodes are removed from derivative matrix.
+        If mask is None, all rows and columns are returned.
+    compensate_edges : bool, optional
+        Subtracts from diagonal so that sum of each row is zero, by default False.
+
+    Returns
+    -------
+    list of scipy.sparse.csc_matrix
+        List of derivative matrices for parallel and perpendicular directions in following order:
+        parallel counter clockwise, perpendicular counter clockwise, parallel clockwise, perpendicular clockwise
+    """
+    derivatives = [
+        anisotropic_derivative_matrix(grid, flux, 'parallel', 'forward', mask, compensate_edges),
+        anisotropic_derivative_matrix(grid, flux, 'perpendicular', 'forward', mask, compensate_edges),
+        anisotropic_derivative_matrix(grid, flux, 'parallel', 'backward', mask, compensate_edges),
+        anisotropic_derivative_matrix(grid, flux, 'perpendicular', 'backward', mask, compensate_edges),
+    ]
+    return derivatives
 
 
 def reduce_matrix(mat: sparse.spmatrix, mask: np.ndarray) -> sparse.spmatrix:
@@ -59,7 +134,7 @@ def compensate_matrix(mat: sparse.spmatrix) -> sparse.spmatrix:
 
 def derivative_matrix(
         grid: RegularGrid, direction: str, scheme: str = 'forward', 
-        mask: np.ndarray = None, compensate_edges=True
+        mask: Optional[np.ndarray] = None, compensate_edges=True
     ) -> sparse.csc_matrix:
     """
     Creates a derivative matrix using numerical differences
@@ -154,7 +229,10 @@ def derivative_matrix(
     return dmat
 
 
-def laplace_matrix(grid: RegularGrid, mask=None, compensate_edges=True, diagonals=True) -> sparse.csc_matrix:
+def laplace_matrix(
+        grid: RegularGrid, 
+        mask: Optional[np.ndarray] = None, compensate_edges: bool = True, diagonals: bool = True
+    ) -> sparse.csc_matrix:
     """
     Creates sparse laplace matrix.
 
@@ -202,9 +280,8 @@ def laplace_matrix(grid: RegularGrid, mask=None, compensate_edges=True, diagonal
 
 
 def anisotropic_derivative_matrix(
-        grid: RegularGrid, fluxes: np.ndarray, 
-        direction='parallel', scheme='forward',
-        mask: np.ndarray = None, compensate_edges=True
+        grid: RegularGrid, fluxes: np.ndarray, direction: str = 'parallel', scheme: str = 'forward',
+        mask: Optional[np.ndarray] = None, compensate_edges: bool = True
     ) -> sparse.csc_matrix:
     """
     Computes derivative matrix with varying direction based on flux surfaces shapes.
