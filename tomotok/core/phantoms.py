@@ -168,3 +168,55 @@ def islands(psi, w=.01, lim=1, amp=1, cen=0.4, num=3, shift=0):
     res = gauss(psi, w, lim, amp, cen)
     res = polar_phase(res, num, shift)
     return res
+
+
+def gaussian_on_flux(
+    flux: np.ndarray, amplitude: float = 1, center: float = 0, width: float = 0.1, 
+    limit: float = 1, limit_width: float = 0.2, limit_power: int = 2
+    ):
+    r"""
+    Creates anisotropic gaussian artificial emissivity by 1D transform of x
+
+    .. math::
+        f = amp \left( \mathrm{e}^{-(x-cen)^2 / w } - \mathrm{e}^{-(lim-cen)^2 / w)} \right)
+
+    Can be used on np.ndarray. Lim should be greater than cen.
+
+    Parameters
+    ----------
+    flux : np.ndarray
+        Flux values for transformation
+    amplitude : float, optional
+        maximum of gaussian profile, 
+    center : float, optional
+        center of gaussian profile
+        allows hollow profile generation when mapped on psi
+    width : float, optional
+        width of gaussian profile    
+    limit : float, optional
+        flux value where emissivity is forced to reach zero
+        if flux > limit emissivity is set to zero
+    limit_width : float, optional
+        width of transition from gaussian profile to zero at limit value of flux
+    limit_power : float, optional
+        power of polynomial transition from gaussian profile to zero at limit value of flux
+
+    Returns
+    -------
+    numpy.ndarray
+        Transformed values of x with same dimensions
+    """
+    center_dst_sq = (flux - center) * (flux - center)
+    res = np.exp(-center_dst_sq / width)
+
+    lim_start = limit - limit_width
+    edge_poly = (limit - center) * (limit - center)
+    edge_poly = ((flux - lim_start)/ limit_width) ** limit_power
+    # tlim = tx / (lim - cen)**2
+    limit_value = np.exp(-(limit - center)**2 / width)
+    result_modifier = limit_value * edge_poly
+    result_modifier[flux<lim_start] = 0
+    res -= result_modifier
+    res = np.where(res < 0, 0, res)
+    res *= amplitude
+    return res
