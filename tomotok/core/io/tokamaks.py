@@ -139,7 +139,7 @@ class Tokamak(Dsystem):
         return magfield
 
     @staticmethod
-    def interpolate_mag_field(magfield, grid, tvec=None):
+    def interpolate_mag_field(magfield: dict, grid: RegularGrid, tvec=None) -> dict:
         """
         Interpolates given magnetic field to provided grid using rectangular bivariate spline.
 
@@ -155,10 +155,13 @@ class Tokamak(Dsystem):
         -------
         dict
         """
+        if not isinstance(tvec, np.ndarray):
+            tvec = np.array([tvec])
         if tvec is None:
-            tidx = np.arange(magfield['time'].size, dtype=np.int)
+            tidx = np.arange(magfield['time'].size, dtype=int)
         else:
             tidx = np.searchsorted(magfield['time'], tvec)
+            tidx[tidx==magfield['time'].size] -= 1  # last time slice is used for values after
             tidx = np.unique(tidx)
             
         nslices = tidx.size

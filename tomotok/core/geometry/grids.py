@@ -4,11 +4,10 @@
 """
 Contains class describing regularly spaced node grid
 """
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 from matplotlib.path import Path as MplPath
-from numpy.typing import NDArray
 
 
 class RegularGrid(object):
@@ -179,7 +178,7 @@ class RegularGrid(object):
                 inside[i, j] = any([bl, br, tl, tr])
         return inside
 
-    def corners(self, mask: NDArray[np.bool_] = None) -> np.ndarray:
+    def corners(self, mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Creates an array with r, z coordinates of node corners. 
         

@@ -11,5 +11,5 @@ Contains functions and classes required for geometry matrix computation using si
 """
 from .generators import dense_line, sparse_line, calcam_sparse_line
 from .grids import RegularGrid
-from .los import generate_los, generate_directions, save_los
-from .io import *
+from .io import save_dense_gmat, save_sparse_gmat, load_dense_gmat, load_sparse_gmat
+from .los import generate_los, save_los

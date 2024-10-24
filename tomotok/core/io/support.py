@@ -28,7 +28,12 @@ def to_hdf(dct: dict, floc: Union[str, Path], attrs: dict = {}, auto_rename=True
     floc = floc.expanduser()
     if floc.exists():
         if auto_rename:
-            new = floc.parent / f'{floc.stem}_1{floc.suffix}'
+            i = 0
+            new = floc
+            while new.exists():
+                i += 1
+                # FIXME: is there a missing dot before suffix? Handle no suffix case.
+                new = floc.parent / f'{floc.stem}_{i}{floc.suffix}'
             warn(f'File {floc} already exists. Renaming to {new}')
             floc = new
         else:
