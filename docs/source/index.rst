@@ -20,7 +20,6 @@ Welcome to the Tomotok project for tomography of tokamak plasma.
    install
    inversions/inversions
    auxilia/auxilia
-   gui/gui
    glossary
 
 .. toctree::
@@ -28,7 +27,6 @@ Welcome to the Tomotok project for tomography of tokamak plasma.
    :caption: Api Doc
 
    api/tomotok.core
-   api/tomotok.gui
 
 Indices and tables
 ------------------

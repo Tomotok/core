@@ -31,10 +31,6 @@ Implemented auxiliary features:
 - Simple phantom model generators (isotropic and anisotropic)
 - Other tools for processing
 
-## Graphical User Interface
-
-A simple graphical user interface for visualisation and post-processing of tomographic results is included in the Core package. It is based on a modular system of windows. It uses a main window to spawn child windows for analysis, allowing users to customise the displayed information according to their needs.
-
 # Citing the Code
 
 "J. Svoboda, J. Cavalier, O. Ficker, M. Imrisek, J. Mlynar and M. Hron, *Tomotok: python package for tomography of tokamak plasma radiation*, Journal of Instrumentation 16.12 (2021): C12015."

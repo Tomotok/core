@@ -13,4 +13,3 @@ Subpackages
    :maxdepth: 4
 
    tomotok.core
-   tomotok.gui
