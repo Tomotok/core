@@ -98,7 +98,7 @@ class CholeskyJaxBob(Bob):
         self._cho_solve = cho_solve
         super().__init__()
 
-    def compute_coefficients(self, a: csr_matrix) -> csr_matrix:
+    def compute_coordinates(self, a: csr_matrix) -> csr_matrix:
         """
         Uses cholesky decomposition from JAX to solve the decomposition task
 

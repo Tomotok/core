@@ -59,7 +59,8 @@ class CholmodBob(Bob):
         self._NotPositiveDefiniteError = CholmodNotPositiveDefiniteError
         super().__init__()
 
-    def compute_coefficients(self, a: sparse.spmatrix, solver_kw: dict = None) -> sparse.csr_matrix:
+    def compute_coordinates(self, a: sparse.spmatrix, solver_kw: dict = None) -> sparse.csr_matrix:
+        solver_kw = solver_kw or {}
         try:
             factor = self._cholesky(a, **solver_kw)
         except self._NotPositiveDefiniteError:

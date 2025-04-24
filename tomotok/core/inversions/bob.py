@@ -16,6 +16,7 @@ import h5py
 import numpy as np
 from scipy import sparse
 from scipy.linalg import cho_factor, cho_solve
+from scipy.sparse import linalg as sp_linalg
 
 
 from tomotok.core.tools.hdf import sparse_to_hdf, hdf_to_sparse
@@ -27,8 +28,10 @@ class Bob(object):
 
     Attributes
     ----------
-    basis : scipy.sparse.dia_matrix
+    basis : scipy.sparse.spmatrix
         :math:`\mathbf{b}_i` basis vectors of reconstruction plane
+    basis_inv : scipy.sparse.spmatrix
+        inverse of basis matrix, used for transformation to node basis
     dec_mat : scipy.sparse.csr_matrix
         :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
     norms : numpy.ndarray
@@ -47,7 +50,7 @@ class Bob(object):
         # TODO one parameter holding both dec_mat and basis?
         super().__init__()
         self.basis = basis
-        self.dec_mat = dec_mat
+        self.adjoint_basis = dec_mat
         self.norms = None
         return
 
@@ -60,7 +63,7 @@ class Bob(object):
         gmat : scipy.sparse.csr_matrix
             geometry/contribution matrix
         basis : sparse matrix
-            matrix with basis vectors
+            matrix with decomposition basis vectors
         reg_factor : float, optional
             regularisation factor passed to cholesky decomposition
             determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
@@ -77,17 +80,18 @@ class Bob(object):
         if los_num < node_num:
             warnings.warn('Biorthogonal algorithm requires more lines of sights than nodes in reconstruction plane to run reliably')
         self.basis = basis
-        image_base = gmat @ self.basis  # e_i previously known as chi, gmat in basis
-        a = (image_base.T @ image_base)  # symmetrized geometry matrix in basis
+        self.basis_inv = sp_linalg.inv(self.basis)
+        projection_basis = gmat @ self.basis  # A with columns of a_i, projections of decomposition basis
+        ata = (projection_basis.T @ projection_basis)  # <A^T|A> symmetrized projections
         if reg_factor:
-            a = a + a.max() * reg_factor * sparse.eye(*a.shape, format='csc')
-        c = self.compute_coefficients(a, **solver_kw)  # coefficient matrix
-        self.dec_mat = image_base @ c  # \hat{e}_i previously known as xi, decomposed matrix
+            ata = ata + ata.max() * reg_factor * sparse.eye(*ata.shape, format='csc')
+        c = self.compute_coordinates(ata, **solver_kw)  # coordinate matrix
+        self.adjoint_basis = projection_basis @ c  # \hat{b}_i previously known as xi
         return
 
-    def compute_coefficients(self, a: sparse.csc_matrix, check_finite=False) -> sparse.csr_matrix:
+    def compute_coordinates(self, a: sparse.csc_matrix, check_finite=False) -> sparse.csr_matrix:
         """
-        Computes coefficient matrix using cho_factor and cho_solve from scipy.linalg
+        Computes coordinate matrix using cho_factor and cho_solve from scipy.linalg.
 
         Parameters
         ----------
@@ -100,7 +104,7 @@ class Bob(object):
             a = a.toarray()
         factor = cho_factor(a, check_finite=check_finite)
         b = np.eye(a.shape[0])
-        c = cho_solve(factor, b, check_finite=False)
+        c = cho_solve(factor, b, check_finite=False)  # no need to check again
         return sparse.csr_matrix(c)
 
     def __call__(self, data: np.ndarray, gmat: sparse.csr_matrix = None, thresholding=None, **kw) -> np.ndarray:
@@ -121,16 +125,22 @@ class Bob(object):
         numpy.ndarray
             inversion results with shape (# nodes, # time slices)
         """
-        # TODO transpose data and res?
+        # FIXME: transpose data and res so that each time slice is a column
         if thresholding is not None:
             warnings.warn('Thresholding not implemented to call method. Ignoring.')
-        if self.dec_mat is None:
+        if self.adjoint_basis is None:
             if gmat is None:
                 raise ValueError('Gmat must be provided for decomposition')
             else:
                 self.decompose(gmat)
-        coeffs = self.dec_mat.T @ data  # coordinates in decomposition basis
-        res = self.basis @ coeffs  # result in node basis
+        coeffs = self.adjoint_basis.T @ data  # coordinates in decomposition basis
+        # TODO: no need to normalise here, none of the bases is
+        # if self.norms is None:
+        #     self.normalise()
+        # coeffs = coeffs * self.norms
+        # FIXME: work only for simple basis -> coeffs @ (basis) in dec. basis coords
+        # res = self.basis @ coeffs  # result in node basis
+        res = coeffs.T @ self.basis_inv
         return res
 
     def save_decomposition(self, floc: Union[str, Path], description: str = '') -> None:
@@ -144,14 +154,14 @@ class Bob(object):
         description : str, optional
             short user description for file identification
         """
-        if self.dec_mat is None:
+        if self.adjoint_basis is None:
             raise ValueError('Can not save decomposition before it is calculated.')
         floc = str(floc)
         with h5py.File(floc, 'w') as f:
             f.attrs['version'] = '0.1'
             f.attrs['description'] = description
             dec_mat = f.create_group('decomposed_matrix')
-            sparse_to_hdf(self.dec_mat, dec_mat)
+            sparse_to_hdf(self.adjoint_basis, dec_mat)
             basis = f.create_group('basis')
             sparse_to_hdf(self.basis, basis)
             if self.norms is not None:
@@ -169,12 +179,13 @@ class Bob(object):
             location of hdf file with saved decomposition
         """
         with h5py.File(floc, 'r') as f:
-            self.dec_mat = hdf_to_sparse(f['decomposed_matrix'])
+            self.adjoint_basis = hdf_to_sparse(f['decomposed_matrix'])
             self.basis = hdf_to_sparse(f['basis'])
             try:
                 self.norms = f['norms'][:]
             except KeyError:
                 self.norms = None
+        self.basis_inv = sp_linalg.inv(self.basis)
         return
 
     def normalise(self, precision: float = 1e-6) -> None:
@@ -186,8 +197,8 @@ class Bob(object):
         precision : float, optional
             neglects decomposition matrix rows with lower norm, by default 1e-6
         """
-        image_base_adj = self.dec_mat
-        kappa = sparse.linalg.norm(image_base_adj, axis=0)
+        adjoint_basis = self.adjoint_basis
+        kappa = sparse.linalg.norm(adjoint_basis, axis=0)
         idx = kappa > precision
         norms = np.zeros(kappa.size)
         norms[idx] = (1 / kappa[idx])
@@ -218,13 +229,13 @@ class Bob(object):
         RuntimeError
             If thresholding is called before decomposition of geometry matrix
         """
-        if self.dec_mat is None:
+        if self.adjoint_basis is None:
             raise RuntimeError('Decomposition must be computed prior to thresholding.')
         if self.norms is None:
             self.normalise(precision)
 
         # calculate plane basis coefficients
-        coeffs = self.dec_mat.T @ image
+        coeffs = self.adjoint_basis.T @ image
 
         # thresholding loop
         a = np.abs(coeffs * self.norms)  # normalised coefficients
@@ -246,7 +257,7 @@ class SparseBob(Bob):
     Biorthogonal Basis Decomposition optimized for sparse matrices using inverse matrix calculation.
     """
 
-    def compute_coefficients(self, a: sparse.csc_matrix) -> sparse.csr_matrix:
+    def compute_coordinates(self, a: sparse.csc_matrix) -> sparse.csr_matrix:
         try:
             c = sparse.linalg.inv(a)
         except RuntimeError:

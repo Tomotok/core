@@ -35,7 +35,9 @@ The basis vectors :math:`\hat{\mathbf{e}}_{i}` can be found by applying the bior
 Implementation
 --------------
 
-Dense matrices only. No wavelet support implemented yet. Simple one node basis is used.
+No wavelet support implemented yet. Simple one node basis is used.
+
+This algorithm was optimized to use sparse matrices. Two approaches were used, one relying on scipy.sparse and the other on Cholesky decomposition implemented in scikit-sparse. The cholesky decomposition requires the matrix to be positive definite. This is not always the case for visible cameras and simple node basis, especially, when there is noise in the signal or reflections on PFC occur. Therefore, simple regularisation using identity matrix was implemented. This is equivalent of Tikhonov regularisation. The regularisation parameter is typically in orders lower than of 0.001 times maximum in inverted matrix.
 
 References
 ----------
