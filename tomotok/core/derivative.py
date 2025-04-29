@@ -166,9 +166,9 @@ def derivative_matrix(
     upper = sparse.diags([1], [grid.nr], shape=(grid.size, grid.size), format='csc')
     upper_left = sparse.diags([1], [grid.nr - 1], shape=(grid.size, grid.size), format='csc')
     left = sparse.diags([1], [-1], shape=(grid.size, grid.size), format='csc')
-    lower_left = upper = sparse.diags([1], [-grid.nr - 1], shape=(grid.size, grid.size), format='csc')
+    lower_left = sparse.diags([1], [-grid.nr - 1], shape=(grid.size, grid.size), format='csc')
     lower = sparse.diags([1], [-grid.nr], shape=(grid.size, grid.size), format='csc')
-    lower_right = upper = sparse.diags([1], [-grid.nr + 1], shape=(grid.size, grid.size), format='csc')
+    lower_right = sparse.diags([1], [-grid.nr + 1], shape=(grid.size, grid.size), format='csc')
 
     if direction == 'right':
         following = right
@@ -217,7 +217,7 @@ def derivative_matrix(
         dmat = dmat / step
     else:
         schemes = ['forward', 'backward', 'central', 'second']
-        msg = 'Uknown numerical derivatie scheme {}. Use one of {}.'
+        msg = 'Unknown numerical derivative scheme {}. Use one of {}.'
         raise ValueError(msg.format(scheme, schemes))
 
     # normalisation
