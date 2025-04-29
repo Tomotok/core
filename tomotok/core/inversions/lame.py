@@ -361,6 +361,6 @@ class GevFastAlgebraic(FastAlgebraic):
 
         s_sqrt = np.sqrt(s)
 
-        u = gmat.dot(ev) / s_sqrt
+        u = (gmat @ ev) / s_sqrt
         v = s_sqrt * ev
         return u, s, v
