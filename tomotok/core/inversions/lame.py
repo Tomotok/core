@@ -40,8 +40,8 @@ class Algebraic(object):
         return
 
     def invert(
-            self, data: np.ndarray, gmat: sparse.spmatrix, regularisation: sparse.spmatrix, 
-            method: str = None, num: int = None
+            self, data: np.ndarray, gmat: sparse.spmatrix, regularisation: sparse.spmatrix, num: int = None, 
+            *args, **kwargs
         ) -> np.ndarray:
         """
         Computes linear inversion using algebraic method.
@@ -54,21 +54,29 @@ class Algebraic(object):
         Parameters
         ----------
         data : numpy.ndarray
-        gmat : numpy.ndarray
-        regularisation : numpy.ndarray
+        gmat : sparse.spmatrix
+            geometry matrix with shape (#channels, #nodes)
+        regularisation : sparse.spmatrix
             regularisation matrix
-        method : str, optional
-            method used for regularization parameter computation, see method find_alpha
         num : int, optional
-            use only num most significant vectors in series expansion
+            use only `num` most significant vectors in series expansion
+        *args
+            additional positional arguments passed to method determining regularisation parameter
+        **kwargs
+            additional keyword arguments passed to method determining regularisation parameter
 
         Returns
         -------
         numpy.ndarray
             reconstructed emissivity vector with shape (#pix,)
+
+        See Also
+        --------
+        find_alpha : method for finding regularisation parameter
+        series_expansion : method for computing emissivity from decomposed matrices
         """
         self.u, self.s, self.v, = self.decompose(gmat, regularisation)
-        alpha = self.find_alpha(method)
+        alpha = self.find_alpha(*args, **kwargs)
         self.alpha = alpha
         g = self.series_expansion(alpha, data, num=num)
         return g
@@ -104,12 +112,6 @@ class Algebraic(object):
         list of dicts
             inversion statistics for each time slice
         """
-        nslices = data.shape[0]
-        nchnls = data.shape[1]
-        if nchnls != gmat.shape[0]:
-            raise ValueError('Different number of channels in data and gmat')
-        nnodes = gmat.shape[1]
-
         data_ndim = np.ndim(data)
         if data_ndim == 0:
             raise ValueError('Data must be at least an array of values.')
@@ -117,6 +119,12 @@ class Algebraic(object):
             data = data.reshape(1, -1)
         elif data_ndim > 2:
             raise ValueError('Data array has too many dimension.')
+
+        nslices = data.shape[0]
+        nchnls = data.shape[1]
+        if nchnls != gmat.shape[0]:
+            raise ValueError('Different number of channels in data and gmat')
+        nnodes = gmat.shape[1]
 
         err_ndim = np.ndim(errors)
         if err_ndim == 0:  # constant errors
@@ -157,15 +165,20 @@ class Algebraic(object):
 
         Parameters
         ----------
-        derivatives : _type_
+        derivatives : sparse.spmatrix or list of sparse.spmatrix
+            sparse matrices with numerical derivative operators with shape (#nodes, #nodes)
             _description_
-        aniso : int, optional
-            _description_, by default 1
+        derivative_weights : float or list of floats, optional
+            weights assigned to individual derivatives matrices
+            by default all weights are equal
+        node_weights : float or list of floats, optional
+            weights assigned to individual nodes, default is 1 for all nodes
+            can be used to create a non-linear regularisation matrix
 
         Returns
         -------
-        _type_
-            _description_
+        sparse.spmatrix
+            regularisation matrix with shape (#nodes, #nodes)
         """
         if isinstance(derivatives, sparse.spmatrix):
             derivatives = [derivatives]
@@ -188,14 +201,6 @@ class Algebraic(object):
             regularisation += dw / total * dmat.T @ node_weights @ dmat
         return regularisation
 
-    def presolve(self, gmat, deriv):
-        """
-        .. deprecated:: 1.1
-            Use :meth:`decompose`  
-        """
-        self.decompose(gmat, deriv)
-        warn('Presolve method deprecated by decompose method since 1.1', DeprecationWarning)
-
     def decompose(self, gmat, regularisation):
         """
         Prepares matrices in standard form for series expansion
@@ -204,7 +209,7 @@ class Algebraic(object):
         -------
         u, s, v : numpy.ndarray
         """
-        raise NotImplementedError()
+        raise NotImplementedError('Decomposition should be implemented in derived class.')
 
     def find_alpha(self, *args, **kwargs):
         """
@@ -215,7 +220,7 @@ class Algebraic(object):
         float
             regularisation parameter value
         """
-        raise NotImplementedError()
+        raise NotImplementedError('Regularisation parameter estimation should be implemented in derived class.')
 
     def series_expansion(self, alpha, signal, num=None):
         r"""
@@ -248,23 +253,88 @@ class Algebraic(object):
         s = self.s.reshape(1, -1)  # create row vector from diagonal matrix
         s_sq = np.square(s)
         filters = 1 / (1 + alpha / s_sq)
-        tmp = filters / s * self.u.T @ signal * self.v
+        tmp = filters / s * (self.u.T @ signal) * self.v
         g = tmp[:, :num].sum(axis=1)
         return g
 
 
-class FastAlgebraic(Algebraic):
+class SvdAlgebraic(Algebraic):
+    def decompose(
+            self, gmat: sparse.csr_matrix, regularisation: sparse.csc_matrix
+            ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        gmat = gmat.toarray()
+        regularisation = regularisation.toarray()
+        l_mat = np.linalg.cholesky(regularisation)
+        p = np.identity(l_mat.shape[0])
+        l_inv = np.linalg.inv(l_mat)
+        a = (l_inv @ p) @ gmat.T
+        u, s, vt = np.linalg.svd(a.T, full_matrices=False)
+        v = vt.T
+        v_tild = (p.T @ l_inv.T) @ v
+        return u, s, v_tild
+
+
+class GevAlgebraic(Algebraic):
+    def decompose(self, gmat: sparse.csr_matrix, regularisation: sparse.csc_matrix):
+        """
+        Decomposes geometry and regularisation matrices to form suitable for series expansion.
+        
+        Uses generalised eigenvalue decomposition scheme described by L. C. Ingesson in [GEV]_
+
+        Parameters
+        ----------
+        gmat : numpy.ndarray
+            geometry matrix with shape (#channels, #nodes), should not be normalised for this method
+        regularisation : numpy.ndarray
+            regularisation matrix with shape (#nodes, #nodes)
+
+        Returns
+        -------
+        u, s, v
+
+        References
+        ----------
+        .. [GEV] L.C. Ingesson, "The Mathematics of Some Tomography Algorithms Used at JET," JET Joint Undertaking, 2000
+        """
+        gdg = gmat.T @ gmat
+        s, ev = eigsh(gdg, k=gmat.shape[0], M=regularisation)
+
+        # flip to have eigenvalues and vectors sorted from largest to smallest
+        s = s[::-1]
+        ev = ev[..., ::-1]
+
+        s_sqrt = np.sqrt(s)
+
+        u = (gmat @ ev) / s_sqrt
+        v = s_sqrt * ev
+        return u, s, v
+
+
+# class QrAlgebraic(Algebraic):
+#     def __init__(self):
+#         raise NotImplementedError('Not yet finished')
+
+#     def decompose(self, gmat, regularisation):
+#         l_mat = np.linalg.cholesky(regularisation)
+#         p = np.identity(l_mat.shape[0])
+#         l_inv = np.linalg.inv(l_mat)
+#         a = l_inv.dot(p.dot(gmat.T))
+#         q1, d_roof, s = np.linalg.qr(a.dot(p))
+#         q2, r2 = np.linalg.qr(p.dot(s.T))
+#         m = d_roof.dot(r2.T).dot(np.linalg.inv(d_roof))
+#         r3, d3, q3 = np.linalg.qr(m)
+
+
+class FastAlgebraic(object):
     """
-    A base class for linear algebraic methods using fast regularisation parameter estimation.
+    A class for fast regularisation parameter estimation in linear algebraic methods.
     
     The regularisation parameter estimate is based on the diagonal matrix obtained by decomposition.
+    This class should be combined with a Algebraic subclass implementing the decompose method.
     """
     def __init__(self):
         super().__init__()
         return
-
-    def decompose(self, gmat, regularisation):
-        raise NotImplementedError()
 
     def find_alpha(self, method: str='quantile'):
         """
@@ -299,68 +369,22 @@ class FastAlgebraic(Algebraic):
         return alpha**2
 
 
-class SvdFastAlgebraic(FastAlgebraic):
-    def decompose(
-            self, gmat: sparse.csr_matrix, regularisation: sparse.csc_matrix
-            ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        gmat = gmat.toarray()
-        regularisation = regularisation.toarray()
-        l_mat = np.linalg.cholesky(regularisation)
-        p = np.identity(l_mat.shape[0])
-        l_inv = np.linalg.inv(l_mat)
-        a = (l_inv @ p) @ gmat.T
-        u, s, vt = np.linalg.svd(a.T, full_matrices=False)
-        v = vt.T
-        v_tild = (p.T @ l_inv.T) @ v
-        return u, s, v_tild
-
-
-class QrFastAlgebraic(FastAlgebraic):
+class FastSvdAlgebraic(FastAlgebraic, SvdAlgebraic):
+    """
+    A class for linear algebraic methods using SVD decomposition and fast regularisation parameter estimation.
+    
+    The regularisation parameter estimate is based on the diagonal matrix obtained by decomposition.
+    """
     def __init__(self):
-        raise NotImplementedError('Not yet finished')
+        super().__init__()
+        return
 
-    def decompose(self, gmat, regularisation):
-        l_mat = np.linalg.cholesky(regularisation)
-        p = np.identity(l_mat.shape[0])
-        l_inv = np.linalg.inv(l_mat)
-        a = l_inv.dot(p.dot(gmat.T))
-        q1, d_roof, s = np.linalg.qr(a.dot(p))
-        q2, r2 = np.linalg.qr(p.dot(s.T))
-        m = d_roof.dot(r2.T).dot(np.linalg.inv(d_roof))
-        r3, d3, q3 = np.linalg.qr(m)
-        raise NotImplementedError('Not yet finished')
-
-
-class GevFastAlgebraic(FastAlgebraic):
-    def decompose(self, gmat: sparse.csr_matrix, regularisation: sparse.csc_matrix):
-        """
-        Decomposes geometry and regularisation matrices to form suitable for series expansion.
-        
-        Uses generalised eigenvalue decomposition scheme described by L. C. Ingesson in [GEV]_
-
-        Parameters
-        ----------
-        gmat : numpy.ndarray
-        regularisation : numpy.ndarray
-            regularisation matrix with shape (#nodes, #nodes)
-
-        Returns
-        -------
-        u, s, v
-
-        References
-        ----------
-        .. [GEV] L.C. Ingesson, "The Mathematics of Some Tomography Algorithms Used at JET," JET Joint Undertaking, 2000
-        """
-        gdg = gmat.T @ gmat
-        s, ev = eigsh(gdg, k=gmat.shape[0], M=regularisation)
-
-        # flip to have eigenvalues and vectors sorted from largest to smallest
-        s = s[::-1]
-        ev = ev[..., ::-1]
-
-        s_sqrt = np.sqrt(s)
-
-        u = (gmat @ ev) / s_sqrt
-        v = s_sqrt * ev
-        return u, s, v
+class FastGevAlgebraic(FastAlgebraic, GevAlgebraic):
+    """
+    A class for linear algebraic methods using GEV decomposition and fast regularisation parameter estimation.
+    
+    The regularisation parameter estimate is based on the diagonal matrix obtained by decomposition.
+    """
+    def __init__(self):
+        super().__init__()
+        return

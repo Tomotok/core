@@ -12,7 +12,7 @@ Currently implemented
 """
 
 from .bob import Bob, SparseBob
-from .lame import SvdFastAlgebraic, GevFastAlgebraic
+from .lame import FastGevAlgebraic, FastSvdAlgebraic
 from .sksparse import CholmodMfr, CholmodFixt, CholmodBob
 from .mfr import Mfr
 from .fixed import Fixt
