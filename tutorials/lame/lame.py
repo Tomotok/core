@@ -5,6 +5,8 @@ from tomotok.core.phantoms import gauss_iso
 from tomotok.core.geometry import generate_los, sparse_line, RegularGrid
 from tomotok.core.derivative import derivative_matrix, laplace_matrix
 from tomotok.core.inversions import FastGevAlgebraic, FastSvdAlgebraic
+from tomotok.tools.regularisation import regularisation_matrix
+
 
 grid = RegularGrid(50, 100, (.2, .7), (-.5, .5))
 
@@ -32,29 +34,33 @@ plt.colorbar(label='Length [-]')
 plt.xlabel('R [-]')
 plt.ylabel('z [-]')
 
-sig = gmat @ phantom.flatten()
+np.random.seed(20250506)
+forward = gmat @ phantom.flatten()
+noise = 0.05 * forward.max()
+signal = forward + np.random.normal(0, noise, forward.shape)
+errors = (signal + signal.max() ) / 2 * .05
 
 plt.figure()
-plt.plot(sig, '+')
+plt.errorbar(np.arange(signal.size), signal, yerr=errors, fmt='+', capsize=3, label='Signal with noise estimate')
+plt.plot(forward, label='Exact', marker='x', ls='')
 plt.xlabel('Channel [-]')
 plt.ylabel('Signal [-]')
+plt.legend()
 
-data = sig.reshape(1, -1)  # data should have shape (#timeslices, #channels/pixels)
-
-errors = (data + data.max() ) / 2 * .05
-# errors = .001
 
 svd = FastSvdAlgebraic()  # no sparse optimization
 
-dmats = [
+derivatives = [
     derivative_matrix(grid, 'left', compensate_edges=False),
     derivative_matrix(grid, 'bottom', compensate_edges=False),
     derivative_matrix(grid, 'right', compensate_edges=False),
     derivative_matrix(grid, 'top', compensate_edges=False),
 ]
-# dmats = [laplace_matrix(grid, compensate_edges=False)]
+# derivatives = [laplace_matrix(grid, compensate_edges=False)]
 
-out_svd, stats_svd = svd(data, gmat, dmats, errors, method='median')
+regularisation = regularisation_matrix(derivatives)
+
+out_svd, stats_svd = svd(signal, gmat, regularisation, errors, method='median')
 
 plt.figure()
 plt.title('SVD')
@@ -63,16 +69,16 @@ plt.colorbar(label='Emissivity [-]')
 plt.xlabel('R [-]')
 plt.ylabel('z [-]')
 
-tmp = svd.series_expansion(svd.alpha, data[0]/errors[0])
+tmp = svd.series_expansion(svd.alpha, signal/errors)
 # tmp = svd.series_expansion(1, data_nrm[0])
 
 plt.figure()
-plt.plot(data[0])
+plt.plot(signal[0])
 plt.plot(gmat @ tmp)
 
 gev = FastGevAlgebraic()
 
-out_gev, stats_gev = gev(data, gmat, dmats, errors, method='median')
+out_gev, stats_gev = gev(signal, gmat, regularisation, errors, method='median')
 
 plt.figure()
 plt.title('GEV')
