@@ -7,7 +7,7 @@ Structure of classes is based on algorithms proposed by T. Odstrcil however with
 T. Odstrcil et al., "Optimized tomography methods for plasma emissivity reconstruction at the
 ASDEX Upgrade tokamak," Rev. Sci. Instrum., 87(12), 123505.
 """
-from typing import List, Tuple
+from typing import Tuple
 from warnings import warn
 
 import numpy as np
@@ -16,10 +16,12 @@ from scipy.optimize import minimize_scalar
 from scipy.stats.mstats import mquantiles
 from scipy.sparse.linalg import eigsh
 
+from .base import Solver
 
-class Algebraic(object):
+
+class Algebraic(Solver):
     """
-    A base class for algebraic inversion methods using linear regularisation.
+    A base class for solvers base on algebraic inversion methods.
 
     Attributes
     ----------
@@ -31,59 +33,15 @@ class Algebraic(object):
         decomposition matrix with shape (#nodes, #channels)    
     """
     def __init__(self):
-        self.u = None
-        self.s = None
-        self.v = None
-        self.alpha = None
+        self.u: np.ndarray = None
+        self.s: np.ndarray = None
+        self.v: np.ndarray = None
         return
-
-    def invert(
-            self, data: np.ndarray, gmat: sparse.spmatrix, regularisation: sparse.spmatrix, num: int = None, 
-            *args, **kwargs
-        ) -> np.ndarray:
-        """
-        Computes linear inversion using algebraic method.
-        The inversion comprises of three stages:
-
-            - decomposition (presolving) using only geometry and derivative matrices
-            - searching for regularisation parameter
-            - solving inversion using series expansion
-
-        Parameters
-        ----------
-        data : numpy.ndarray
-        gmat : sparse.spmatrix
-            geometry matrix with shape (#channels, #nodes)
-        regularisation : sparse.spmatrix
-            regularisation matrix
-        num : int, optional
-            use only `num` most significant vectors in series expansion
-        *args
-            additional positional arguments passed to method determining regularisation parameter
-        **kwargs
-            additional keyword arguments passed to method determining regularisation parameter
-
-        Returns
-        -------
-        numpy.ndarray
-            reconstructed emissivity vector with shape (#pix,)
-
-        See Also
-        --------
-        find_alpha : method for finding regularisation parameter
-        series_expansion : method for computing emissivity from decomposed matrices
-        """
-        self.decompose(gmat, regularisation)
-        # TODO: consider method regularize instead of find_alpha
-        alpha = self.find_alpha(*args, **kwargs)
-        self.alpha = alpha
-        g = self.series_expansion(alpha, data, num=num)
-        return g
 
     def __call__(
             self, data: np.ndarray, gmat: sparse.spmatrix, regularisation: sparse.spmatrix, errors: np.ndarray, num: int = None,
             *args, **kwargs
-            ) -> Tuple[np.ndarray, List[dict]]:
+            ) -> Tuple[np.ndarray, dict]:
         """
         Computes linear inversion using algebraic method.
         The inversion comprises of three stages:
@@ -128,13 +86,13 @@ class Algebraic(object):
             raise ValueError('Data shape {} does not match errors shape {}.'.format(data.shape, errors.shape))
 
         data = data / errors
-
-        signal = data.flatten()
         norms = sparse.diags(1/errors)
 
         gmat_nrm = norms @ gmat
-        res = self.invert(signal, gmat_nrm, regularisation, num=num, *args, **kwargs)
-        stats = {'alpha': self.alpha}
+        if self.s is None:
+            self.decompose(gmat_nrm, regularisation)
+        alpha, stats = self.find_alpha(*args, **kwargs)
+        res = self.series_expansion(alpha, data, num=num)
         return res, stats
 
     def decompose(self, gmat, regularisation, *args, **kwargs):
@@ -143,14 +101,12 @@ class Algebraic(object):
 
         This method should be implemented in derived class.
         The matrices are stored in the class attributes `u`, `s`, and `v`.
-
-        Returns
-        -------
-        u, s, v : numpy.ndarray
         """
-        raise NotImplementedError('Decomposition should be implemented in derived class.')
+        warn('Decomposition is not implemented in base class. '
+             'This method should be implemented in derived class.', UserWarning)
+        return
 
-    def find_alpha(self, *args, **kwargs):
+    def find_alpha(self, *args, **kwargs) -> Tuple[float, dict]:
         """
         Finds regularisation parameter.
 
@@ -158,10 +114,12 @@ class Algebraic(object):
         -------
         float
             regularisation parameter value
+        dict
+            statistics of the regularisation parameter estimation
         """
         raise NotImplementedError('Regularisation parameter estimation should be implemented in derived class.')
 
-    def series_expansion(self, alpha, signal, num=None):
+    def series_expansion(self, alpha, data=None, num=None):
         r"""
         Computes emissivity :math:`g` from decomposed vectors using
 
@@ -179,8 +137,8 @@ class Algebraic(object):
         ----------
         alpha : float
             regularisation parameter
-        signal : numpy.ndarray
-            vector with channel signal
+        data : numpy.ndarray, optional
+            vector with data to be inverted, if not provided, the data stored in the class are used
         num : int
             number of columns used for series expansion
 
@@ -189,10 +147,12 @@ class Algebraic(object):
         numpy.ndarray
             results of inversion
         """
-        s = self.s.reshape(1, -1)  # create row vector from diagonal matrix
+        if data is None:
+            data = self._data
+        s = self.s.reshape(1, -1)  # create row vector from the diagonal of the diagonal matrix
         s_sq = np.square(s)
         filters = 1 / (1 + alpha / s_sq)
-        tmp = filters / s * (self.u.T @ signal) * self.v
+        tmp = filters / s * (self.u.T @ data) * self.v
         g = tmp[:, :num].sum(axis=1)
         return g
 
@@ -268,7 +228,7 @@ class GevAlgebraic(Algebraic):
 #         r3, d3, q3 = np.linalg.qr(m)
 
 
-class FastAlgebraic(object):
+class FastAlgebraic(Algebraic):
     """
     A class for fast regularisation parameter estimation in linear algebraic methods.
     
@@ -279,7 +239,7 @@ class FastAlgebraic(object):
         super().__init__()
         return
 
-    def find_alpha(self, method: str='quantile'):
+    def find_alpha(self, method: str='quantile') -> Tuple[float, dict]:
         """
         Finds regularisation parameter using linear estimate based on values of diagonal.
 
@@ -292,6 +252,8 @@ class FastAlgebraic(object):
         -------
         float
             squared value found by estimation method
+        dict
+            statistics of the regularisation parameter estimation
         """
         if method is None:
             method = 'quantile'
@@ -309,44 +271,178 @@ class FastAlgebraic(object):
             alpha = np.power(10, log_s.mean())
         else:
             raise ValueError('Unrecognized option for regularisation parameter estimation: {}'.format(method))
-        return alpha**2
+        stats = {}
+        stats['method'] = method
+        stats['alpha'] = alpha
+        stats['logalpha'] = np.log10(alpha)
+        stats['alpha_sq'] = alpha**2
+        return alpha**2, stats
 
 
 class FastSvdAlgebraic(FastAlgebraic, SvdAlgebraic):
     """
-    A class for linear algebraic methods using SVD decomposition and fast regularisation parameter estimation.
+    Uses SVD decomposition and fast regularisation parameter estimation.
     
     The regularisation parameter estimate is based on the diagonal matrix obtained by decomposition.
     """
-    def __init__(self):
-        super().__init__()
-        return
+    pass
 
 
 class FastGevAlgebraic(FastAlgebraic, GevAlgebraic):
     """
-    A class for linear algebraic methods using GEV decomposition and fast regularisation parameter estimation.
+    Uses GEV decomposition and fast regularisation parameter estimation.
     
     The regularisation parameter estimate is based on the diagonal matrix obtained by decomposition.
     """
-    def __init__(self):
-        super().__init__()
-        return
+    pass
 
 
-class PearsonAlgebraic(object):
+class PearsonAlgebraic(Algebraic):
     """
     A class for linear algebraic methods using Pearson decomposition and fast regularisation parameter estimation.
     
     The regularisation parameter estimate is based on the diagonal matrix obtained by decomposition.
     """
     def __init__(self):
-        raise NotImplementedError('Not yet finished')
         super().__init__()
         return
 
-    def _pearson(self, data_nrm):
-        return
+    def __call__(
+        self, 
+        data: np.ndarray, 
+        gmat: sparse.spmatrix, 
+        regularisation: sparse.spmatrix, 
+        errors: np.ndarray, 
+        num: int = None,
+        bounds: Tuple[float, float] = (-20, 0),
+        iter_max: int = 13,
+        tolerance: float = 1e-3,
+    ) -> Tuple[np.ndarray, dict]:
+        self._data = data
+        self._gmat =  gmat
+        self._regularisation = regularisation
+        self._errors = errors
+        self._alpha = None
+        self._chisq = None
+        out, stats = super().__call__(
+            data, gmat, regularisation, errors, num=num,
+            bounds=bounds, iter_max=iter_max, tolerance=tolerance
+        )
+        return out, stats
 
-    def find_alpha(self):
-        minimize_scalar()
+    def _pearson_test(self, g):
+        r"""
+        Computes retrofit and residuum :math:`\chi^2` using pearson test
+
+        .. math ::
+            \chi^2 = \frac{1}{M} \sum_{i}^{M} \left(\tilde{\mathbf{f}} - \tilde{\mathbf{T}} \cdot \mathbf{g} \right)_i^2
+
+        Parameters
+        ----------
+        g : numpy.ndarray
+            vector of tested emissivity
+
+        Returns
+        -------
+        float
+        """
+        retrofit = self._gmat @ g
+        misfit = retrofit - self._data
+        misfit_sq = np.power(misfit, 2)
+        self._chisq = np.average(misfit_sq)
+        return self._chisq
+
+    def _test_regularization(self, logalpha):
+        """
+        Function passed to minimisation function used for finding regularisation parameter value.
+
+        Inverses signals using given regularisation parameter and computes chi2 test
+
+        Stores pearson test result in attribute last_chi.
+
+        Parameters
+        ----------
+        logalpha : float
+            natural logarithm of regularisation parameter
+
+        Returns
+        -------
+        abs(chi2 - 1) : float
+            1D Euclidean distance from ideal Pearson test result
+        """
+        alpha = 10 ** logalpha
+        g = self.series_expansion(alpha, self._data)
+        chi2 = self._pearson_test(g)
+        return abs(chi2 - 1)
+
+    def find_alpha(self, bounds, iter_max: int = 13, tolerance: float = 1e-3) -> Tuple[float, dict]:
+        """
+        Finds regularisation parameter using pearson test.
+
+        Uses bounded method of scipy.optimize.minimize_scalar to find the optimal regularisation parameter.
+        The regularisation parameter is not optimized directly, but its 10 based logarithm is used instead.
+        The function to be minimized is the absolute difference between the chi-squared statistic and 1.
+
+        Parameters
+        ----------
+        bounds : tuple
+            lower and upper bounds for the regularisation parameter
+        iter_max : int
+            maximum number of iterations for the minimization algorithm
+        tolerance : float
+            tolerance for the minimization algorithm
+        
+        Returns
+        -------
+        float
+            regularisation parameter value
+        dict
+            statistics of the regularisation parameter estimation
+
+        See Also
+        --------
+        _test_regularization : method for testing regularisation parameter
+        """
+        res = minimize_scalar(
+            self._test_regularization,
+            method='bounded',
+            bounds=bounds,
+            options={'maxiter': iter_max, 'xatol': tolerance},
+        )
+        if res.status == 1:
+            warn('Maximum number of iteration in regularisation parameter search. Consider increasing iter_max.')
+        stats = dict(
+            iter_num=res.nfev,
+            logalpha=res.x,
+            chi2=self._chisq,
+        )
+        return 10**res.x, stats
+
+    def invert(self, alpha):
+        """
+        Inverts the signal using the given regularisation parameter.
+
+        Parameters
+        ----------
+        alpha : float
+            regularisation parameter
+
+        Returns
+        -------
+        numpy.ndarray
+            inverted signal
+        """
+        return self.series_expansion(alpha)
+
+class PearsonGevAlgebraic(PearsonAlgebraic, GevAlgebraic):
+    """
+    Uses GEV decomposition to solve the inverse problem and Pearson test to estimate the regularisation parameter.
+    """
+    pass
+
+
+class PearsonSvdAlgebraic(PearsonAlgebraic, SvdAlgebraic):
+    """
+    Uses SVD decomposition to solve the inverse problem and Pearson test to estimate the regularisation parameter.
+    """
+    pass

@@ -137,8 +137,8 @@ class Mfr(object):
         while counter < mfi_num:
             # MFI loop searching for ideal value of regularisation parameter
             w = np.ones(g.shape)
-            w[g <= 0] = w_max
             w[g > 0] = 1 / g[g > 0]
+            w[g <= 0] = np.nanmax(w)
             # w[g <= 0] = w_max
             w = sparse.diags(w)
             if w_factor is not None:
