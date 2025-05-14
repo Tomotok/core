@@ -14,7 +14,6 @@ from warnings import warn
 
 import numpy as np
 import scipy.sparse as sparse
-from numpy.typing import ArrayLike
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize_scalar
 
@@ -165,7 +164,7 @@ class Mfr(object):
         stats = dict(chi=chis, logalpha=alphas, iter_num=iter_nums, elapsed=ela)
         return g, stats
 
-    def _make_cache(self, signals: ArrayLike, gmat: Union[ArrayLike, sparse.spmatrix]) -> None:
+    def _make_cache(self, signals: np.ndarray, gmat: Union[np.ndarray, sparse.spmatrix]) -> None:
         self._signal = signals
         self._gmat = gmat
         self._gdg = gmat.T @ gmat

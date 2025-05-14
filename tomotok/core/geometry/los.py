@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Tuple, Union, List
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 
 NumberType = Union[int, Tuple[int, int]]
@@ -108,7 +107,7 @@ def generate_los(pinhole: VectorType = (0, 0, 0), num: NumberType = (10, 1), fov
     return start, end
 
 
-def rot_v(points: ArrayLike, angle: float) -> np.ndarray:
+def rot_v(points, angle: float) -> np.ndarray:
     """
     Rotates given points in vertical direction, that is about horizontal y axis perpendicular to r/x.
 
@@ -135,7 +134,7 @@ def rot_v(points: ArrayLike, angle: float) -> np.ndarray:
     return rpoints
 
 
-def rot_h(points: ArrayLike, angle: float) -> np.ndarray:
+def rot_h(points, angle: float) -> np.ndarray:
     """
     Rotates given points in horizontal direction, that is about vertical axis z.
 
@@ -162,8 +161,8 @@ def rot_h(points: ArrayLike, angle: float) -> np.ndarray:
 
 def save_los(
         loc: Union[str, Path], 
-        startpoints: Union[ArrayLike, List[ArrayLike]], 
-        endpoints: Union[ArrayLike, List[ArrayLike]], 
+        startpoints: Union[np.ndarray, List[np.ndarray]], 
+        endpoints: Union[np.ndarray, List[np.ndarray]], 
         detector_names: Union[str, List[str]] = None
 ):
     """

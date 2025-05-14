@@ -9,13 +9,12 @@ from warnings import warn
 
 import numpy as np
 import scipy.sparse as sparse
-from numpy.typing import ArrayLike
 
 from .grids import RegularGrid
 
 
-def sparse_line_3d(rchord: ArrayLike, vchord: ArrayLike, grid: RegularGrid, 
-                   ychord: ArrayLike = None, step=1e-3, rmin: float = None) -> sparse.csr_matrix:
+def sparse_line_3d(rchord: np.ndarray, vchord: np.ndarray, grid: RegularGrid, 
+                   ychord: np.ndarray = None, step=1e-3, rmin: float = None) -> sparse.csr_matrix:
     """
     Computes geometry matrix using simple numerical integration algorithm.
 
@@ -82,7 +81,7 @@ def sparse_line_3d(rchord: ArrayLike, vchord: ArrayLike, grid: RegularGrid,
     return gmat.tocsr()
 
 
-def calcam_sparse_line_3d(pupil: ArrayLike, dirs: ArrayLike, grid: RegularGrid, 
+def calcam_sparse_line_3d(pupil: np.ndarray, dirs: np.ndarray, grid: RegularGrid, 
                           step=1e-3, rmin: float = None, elong=1., steps: float = None) -> sparse.csr_matrix:
     """
     Computes geometry matrix from calcam input using sparse_line_3d algorithm.
@@ -204,7 +203,7 @@ def calcam_sparse_line(pupil: np.ndarray, endpoints: np.ndarray, grid: RegularGr
     return sparse_line(startpoints, endpoints, grid, **kw)
 
 
-def dense_line(starts: np.array, ends: np.array, grid: RegularGrid, step: float = 1e-3, rmin: float = 0):
+def dense_line(starts: np.ndarray, ends: np.ndarray, grid: RegularGrid, step: float = 1e-3, rmin: float = 0):
     """
     Computes geometry matrix using simple numerical integration algorithm.
 
