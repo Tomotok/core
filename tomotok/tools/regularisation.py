@@ -1,5 +1,6 @@
 from typing import Union, List, Optional
 
+import numpy as np
 from scipy import sparse
 
 
@@ -7,7 +8,8 @@ Derivative_type = Union[sparse.spmatrix, List[sparse.spmatrix]]
 
 
 def regularisation_matrix(
-        derivatives: Derivative_type, derivative_weights=None, node_weights=None
+        derivatives: Derivative_type, derivative_weights=None, node_weights=None,
+        compensate_negative_lines: bool = True,
     ) -> sparse.csc_matrix:
     """
     Computes regularisation matrix from derivatives matrices.
@@ -47,6 +49,15 @@ def regularisation_matrix(
     total = sum(derivative_weights)
     regularisation = sparse.csr_matrix(derivatives[0].shape)
     for dw, dmat in zip(derivative_weights, derivatives):
-        dw_mat = sparse.diags(dw/total, shape=dmat.shape)
+        dw = dw / total
+        if isinstance(dw, float):
+            dw = [dw]
+        dw_mat = sparse.diags(dw, shape=dmat.shape)
         regularisation += dmat.T @ (dw_mat * node_weights) @ dmat
+    if compensate_negative_lines:
+        for i in range(2):
+            row_sum = np.array(regularisation.sum(1)).flatten()
+            row_sum[row_sum >= 0] = 0
+            row_sum_diag = sparse.diags([row_sum*2], [0], format='csc')
+            regularisation -= row_sum_diag
     return regularisation
