@@ -23,7 +23,6 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
 	@echo "  markdown   to make markdown files"
-	@echo "  apidoc     to make automated apidoc, no documentation is built"
 	@echo "  html       to make standalone HTML files"
 	@echo "  dirhtml    to make HTML files named index.html in directories"
 	@echo "  singlehtml to make a single large HTML file"
@@ -59,12 +58,6 @@ markdown:
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)/*
-
-.PHONY: apidoc
-apidoc:
-	rm -rf source/api/
-	sphinx-apidoc --no-toc -M -f -o source/api/ ../tomotok/ ../tomotok/core/tests/*
-	@echo "apidoc created"
 
 .PHONY: html
 html:

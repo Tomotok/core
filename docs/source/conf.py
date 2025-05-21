@@ -18,7 +18,6 @@ import os
 import re
 
 import numpydoc
-import sphinx_rtd_theme
 
 
 with open(os.path.join(os.path.dirname(__file__), '../../tomotok/core/VERSION')) as version_file:
@@ -85,7 +84,7 @@ release = ver
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -103,6 +102,7 @@ autodoc_default_options = {
     'members' : True,
     'special-members' : '__call__',
     }
+autodoc_member_order = 'bysource'
 
 # numpydoc
 numpydoc_show_inherited_class_members = False
@@ -142,10 +142,8 @@ todo_include_todos = True
 # a list of builtin themes.
 # html_theme = 'alabaster'
 
-# html_theme = 'rtcat_sphinx_theme'
-# html_theme_path = ['/compass/home/svoboda/.local/lib/python2.7/site-packages']
-
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
+# html_theme = "pydata_sphinx_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -157,7 +155,7 @@ html_theme = "sphinx_rtd_theme"
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-#html_title = None
+html_title = 'Tomotok'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
