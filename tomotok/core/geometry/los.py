@@ -17,7 +17,12 @@ FovType = Union[float, Tuple[float, float]]
 VectorType = Union[Tuple[float, float, float], np.ndarray]
 
 
-def generate_directions(num: NumberType = (10, 1), fov: FovType = (45, 0), axis: VectorType = (1, 0, 0), length=1.) -> np.ndarray:
+def generate_directions(
+    num: NumberType = (10, 1), 
+    fov: FovType = (45, 0), 
+    axis: VectorType = (1, 0, 0), 
+    length=1.0
+) -> np.ndarray:
     """
     Creates direction vectors for lines of sight using camera like convention.
 
@@ -77,8 +82,13 @@ def generate_directions(num: NumberType = (10, 1), fov: FovType = (45, 0), axis:
     return dirs
 
 
-def generate_los(pinhole: VectorType = (0, 0, 0), num: NumberType = (10, 1), fov: FovType = (45, 0), axis: VectorType = (1, 0, 0), length=1.
-                 ) -> Tuple[np.ndarray, np.ndarray]:
+def generate_los(
+    num: NumberType = (10, 1),
+    fov: FovType = (45, 0), 
+    axis: VectorType = (1, 0, 0), 
+    length=1.0,
+    pinhole: VectorType = (0, 0, 0), 
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Creates line of sight endpoints with uniform distribution.
 
@@ -86,14 +96,15 @@ def generate_los(pinhole: VectorType = (0, 0, 0), num: NumberType = (10, 1), fov
     ----------
     num : int or (int,int), optional
         number of generated chords (vertical, horizontal)
-    pinhole : tuple of three floats, optional
-        r and z coordinates of pinhole
     fov : float, or tuple of two float, optional
         vertical and horizontal field of view in degrees
     axis : tuple of three floats, optional
         direction of chordal axis
     length : float, optional
         line of sight length, by default 1
+    pinhole : tuple of three floats, optional
+        r and z coordinates of pinhole
+        FIXME: pinhole description
 
     Returns
     -------
@@ -104,6 +115,7 @@ def generate_los(pinhole: VectorType = (0, 0, 0), num: NumberType = (10, 1), fov
     """
     directions = generate_directions(num, fov, axis, length)
     start = np.full_like(directions, pinhole)
+    # FIXME: pinhole handling
     end = directions + pinhole
     return start, end
 

@@ -25,6 +25,14 @@ tomotok.core.inversions.fixed module
    :undoc-members:
    :show-inheritance:
 
+tomotok.core.inversions.jax module
+----------------------------------
+
+.. automodule:: tomotok.core.inversions.jax
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 tomotok.core.inversions.lame module
 -----------------------------------
 
@@ -39,4 +47,20 @@ tomotok.core.inversions.mfr module
 .. automodule:: tomotok.core.inversions.mfr
    :members:
    :undoc-members:
-   :show-inheritance:   
+   :show-inheritance:
+
+tomotok.core.inversions.sksparse module
+---------------------------------------
+
+.. automodule:: tomotok.core.inversions.sksparse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+tomotok.core.inversions.tikhonov module
+---------------------------------------
+
+.. automodule:: tomotok.core.inversions.tikhonov
+   :members:
+   :undoc-members:
+   :show-inheritance:

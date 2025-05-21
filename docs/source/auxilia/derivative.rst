@@ -7,7 +7,7 @@ Used in regularised inversion methods MFR and LAME. Various schemes for computat
 Implementation
 --------------
 
-Convenience functions for computation return list of tuples holding a pair of sparse matrices.
+Can compute derivative matrices, both isotropic and anisotropic based on magnetic flux values.
 
 .. automodule:: tomotok.core.derivative
     :members:

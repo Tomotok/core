@@ -9,14 +9,6 @@ tomotok.core.geometry package
 Submodules
 ----------
 
-tomotok.core.geometry.analytical module
----------------------------------------
-
-.. automodule:: tomotok.core.geometry.analytical
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 tomotok.core.geometry.generators module
 ---------------------------------------
 
@@ -29,14 +21,6 @@ tomotok.core.geometry.grids module
 ----------------------------------
 
 .. automodule:: tomotok.core.geometry.grids
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-tomotok.core.geometry.handler module
-------------------------------------
-
-.. automodule:: tomotok.core.geometry.handler
    :members:
    :undoc-members:
    :show-inheritance:
