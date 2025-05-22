@@ -1,3 +1,4 @@
+from typing import List
 from warnings import warn
 
 import numpy as np
@@ -5,28 +6,24 @@ from scipy import sparse
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize_scalar
 
-from .base import Solver
+from .base import RegularisedSolver
 
 
-class Cholesky(Solver):
+class Cholesky(RegularisedSolver):
     """
-    Cholesky solver for the inversion problem.
+    Solver of inverse problem with Phillips-Tikhonov regularisation using Cholesky decomposition.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
         self._gmat = None
         self._signal = None
         self._gdg = None
         self._gdsig = None
         self._regularisation = None
+        self._chi_sq = None
 
-    def __call__(
-        self, data, gmat, regularisation, errors,
-        bounds=(-30, 0),
-        iter_max=10, 
-        tolerance=1e-3,
-    ):
+    def __call__(self, data, gmat, regularisation, errors):
         if len(gmat.shape) != 2:
             raise ValueError('Gmat must be a 2D array or matrix')
         if errors.shape != data.shape:
@@ -43,19 +40,75 @@ class Cholesky(Solver):
 
         alpha, stats = self.determine_regularisation(
             regularisation,
-            bounds,
-            iter_max,
-            tolerance
+            self._bounds,
+            self._iter_max,
+            self._tolerance,
         )
-        m = self._gdg + regularisation * alpha
-        g = self.solve(m, self._gdsig)
+        g = self.invert(alpha)
         chi_sq = self._pearson_test(g)
         stats['chi_sq'] = chi_sq
         return g, stats
 
-    def determine_regularisation(self, regularisation, bounds, iter_max, tolerance):
+    def _make_cache(self, data, gmat) -> None:
         """
-        Determines the regularisation matrix using Cholesky decomposition.
+        Prepares cache for Cholesky solver.
+
+        Parameters
+        ----------
+        data
+            normalised data vector
+        gmat
+            normalised geometry matrix
+        """
+        self._signal = data
+        self._gmat = gmat
+        self._gdg = gmat.T @ gmat
+        self._gdsig = gmat.T @ data
+
+    @staticmethod
+    def solve(a, b):
+        r"""
+        Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using scipy.sparse.linalg.spsolve
+        """
+        if isinstance(a, sparse.spmatrix):
+            a = a.toarray()
+        factor = cho_factor(a)
+        return cho_solve(factor, b)
+
+    def invert(self, alpha):
+        """
+        Inverts using provided regularisation parameter.
+
+        Parameters
+        ----------
+        alpha : float
+            regularisation parameter
+        """
+        mod_mat = self._gdg + alpha * self._regularisation
+        g = self.solve(mod_mat, self._gdsig)
+        return g
+
+
+class PearsonCholesky(Cholesky):
+    """
+    Cholesky solver for the inversion problem using Pearson test to select regularisation parameter.
+    """
+    def __init__(
+        self,
+        bounds=(-30, 0),
+        iter_max=10, 
+        tolerance=1e-3,
+    ):
+        self._bounds = bounds
+        self._iter_max = iter_max
+        self._tolerance = tolerance
+        super().__init__()
+
+    def determine_regularisation(self):
+        """
+        Determines value of regularisation parameter using minimisation of Pearson test.
+        
+        The minimisation is done using the `minimize_scalar` function from `scipy.optimize`.
 
         Parameters
         ----------
@@ -75,12 +128,12 @@ class Cholesky(Solver):
         dict
             A dictionary containing statistics about the inversion process.
         """
-        # TODO write custom optimisation routine to avoid recalculating optimal solution to get chi sq
+        # TODO: write custom optimisation routine to avoid recalculating optimal solution to get chi sq
         res = minimize_scalar(
             self._test_regularization,
             method='bounded',
-            bounds=bounds,
-            options={'maxiter': iter_max, 'xatol': tolerance},
+            bounds=self._bounds,
+            options={'maxiter': self._iter_max, 'xatol': self._tolerance},
         )
         if res.status == 1:
             warn('Maximum number of iteration in regularisation parameter search. Consider increasing iter_max.')
@@ -131,46 +184,29 @@ class Cholesky(Solver):
         abs(chi2 - 1) : float
             1D Euclidean distance from ideal Pearson test result
         """
-        alpha = 10 ** logalpha
+        alpha = 10**logalpha
         g = self.invert(alpha)
         chi2 = self._pearson_test(g)
         return abs(chi2 - 1)
 
-    def _make_cache(self, data, gmat) -> None:
+class FixedCholesky(Cholesky):
+    """
+    Cholesky solver for the inversion problem using fixed regularisation parameter.
+    """
+    def __init__(self, parameters: List[float]):
         """
-        Prepares cache for Cholesky solver.
-
         Parameters
         ----------
-        data
-            normalised data vector
-        gmat
-            normalised geometry matrix
+        parameters : list of float
+            List of 10 based logarithm of regularisation parameters.
         """
-        self._signal = data
-        self._gmat = gmat
-        self._gdg = gmat.T @ gmat
-        self._gdsig = gmat.T @ data
+        super().__init__()
+        self._parameters = parameters
 
-    @staticmethod
-    def solve(a, b):
-        r"""
-        Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using scipy.sparse.linalg.spsolve
-        """
-        if isinstance(a, sparse.spmatrix):
-            a = a.toarray()
-        factor = cho_factor(a)
-        return cho_solve(factor, b)
-
-    def invert(self, alpha):
-        """
-        Inverts using provided regularisation parameter.
-
-        Parameters
-        ----------
-        alpha : float
-            regularisation parameter
-        """
-        mod_mat = self._gdg + alpha * self._regularisation
-        g = self.solve(mod_mat, self._gdsig)
-        return g
+    def determine_regularisation(self):
+        alpha = 10**self._parameters.pop(0)
+        stats = dict(
+            iter_num=0,
+            logalpha=self._parameters[0],
+        )
+        return alpha, stats
