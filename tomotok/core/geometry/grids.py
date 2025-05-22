@@ -146,6 +146,37 @@ class RegularGrid(object):
         grid_points = p.contains_points(points)
         inside = grid_points.reshape(self.shape)
         return inside
+
+    def inside_corners(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
+        """
+        Counts how many corners of each node are inside given polygon.
+
+        Parameters
+        ----------
+        r, z : numpy.ndarray
+            Coordinates of polygon points
+
+        Returns
+        -------
+        numpy.ndarray
+            number of corners inside polygon for each node, shape (#z, #r)
+        """
+        rm, zm = np.meshgrid(self.r_border, self.z_border)
+        rm, zm = rm.flatten(), zm.flatten()
+        points = np.stack((rm, zm), axis=1)
+        limiter_coords = np.stack((r, z), axis=1)
+        p = MplPath(limiter_coords)
+        corners = p.contains_points(points)
+        corners = corners.reshape((self.nz+1, self.nr+1))
+        inside = np.zeros(self.shape, dtype=int)
+        for i in range(self.nz):
+            for j in range(self.nr):
+                bl = corners[i, j]
+                br = corners[i, j+1]
+                tl = corners[i+1, j]
+                tr = corners[i+1, j+1]
+                inside[i, j] = sum([bl, br, tl, tr])
+        return inside
     
     def is_inside_any(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
@@ -159,24 +190,27 @@ class RegularGrid(object):
         Returns
         -------
         numpy.ndarray
-            Mask matrix for pixgrid with True values for nodes inside polygon
+            Mask matrix with True values for nodes with at least one corner inside polygon
         """
-        rm, zm = np.meshgrid(self.r_border, self.z_border)
-        rm, zm = rm.flatten(), zm.flatten()
-        points = np.stack((rm, zm), axis=1)
-        limiter_coords = np.stack((r, z), axis=1)
-        p = MplPath(limiter_coords)
-        corners = p.contains_points(points)
-        corners = corners.reshape((self.nz+1, self.nr+1))
-        inside = np.zeros(self.shape, dtype=bool)
-        for i in range(self.nz):
-            for j in range(self.nr):
-                bl = corners[i, j]
-                br = corners[i, j+1]
-                tl = corners[i+1, j]
-                tr = corners[i+1, j+1]
-                inside[i, j] = any([bl, br, tl, tr])
-        return inside
+        inside = self.inside_corners(r, z)
+        return inside > 0
+
+    def is_inside_all(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
+        """
+        Selects nodes with all corners inside given polygon.
+
+        Parameters
+        ----------
+        r, z : numpy.ndarray
+            Coordinate vectors of polygon
+
+        Returns
+        -------
+        numpy.ndarray
+            Mask matrix with True values for nodes with all corners inside polygon
+        """
+        inside = self.inside_corners(r, z)
+        return inside == 4
 
     def corners(self, mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
