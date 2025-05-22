@@ -98,9 +98,10 @@ class Fixt(Mfr):
             g[g <= 0] = 1 / w_max
             w = 1 / g
             # w[g <= 0] = w_max
-            w = sparse.diags(w)
+            # w = sparse.diags(w)
             if w_factor is not None:
-                w = w * sparse.diags(w_factor)
+                # w = w * sparse.diags(w_factor)
+                w *= w_factor
             if zero_negative:
                 g[g < 0] = 0
             objective = self.regularisation_matrix(derivatives, w, derivative_weights)

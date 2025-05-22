@@ -139,9 +139,10 @@ class Mfr(object):
             w[g > 0] = 1 / g[g > 0]
             w[g <= 0] = np.nanmax(w)
             # w[g <= 0] = w_max
-            w = sparse.diags(w)
+            # w = sparse.diags(w)
             if w_factor is not None:
-                w = w * sparse.diags(w_factor)
+                # w = w * sparse.diags(w_factor)
+                w = w * w_factor
             if zero_negative:
                 g[g < 0] = 0
             regularisation, stats = self.determine_regularisation(
@@ -215,6 +216,13 @@ class Mfr(object):
         -------
         scipy.sparse.csc_matrix
         """
+        from tomotok.tools.regularisation import regularisation_matrix
+        return regularisation_matrix(
+            derivatives,
+            derivative_weights=derivative_weights,
+            node_weights=weights,
+            compensate_negative_lines=False,
+        )
         if isinstance(derivatives, sparse.spmatrix):
             derivatives = [derivatives]
         if derivative_weights is None:
