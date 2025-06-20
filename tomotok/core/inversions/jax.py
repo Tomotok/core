@@ -4,7 +4,6 @@
 from typing import Union
 
 import numpy as np
-from numpy.typing import ArrayLike
 from scipy.sparse import csr_matrix, csc_matrix
 
 from .bob import Bob
@@ -27,7 +26,7 @@ class CholeskyJax(object):
         self._cho_solve = cho_solve
         super().__init__()
 
-    def invert(self, a: Union[ArrayLike, csr_matrix], b: ArrayLike) -> np.ndarray:
+    def invert(self, a: Union[np.ndarray, csr_matrix], b: np.ndarray) -> np.ndarray:
         r"""
         Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using jax.scipy
 
@@ -65,7 +64,7 @@ class Jax(object):
         self._jax_solve = solve
         super().__init__()
 
-    def invert(self, a: Union[ArrayLike, csr_matrix], b: ArrayLike) -> np.ndarray:
+    def invert(self, a: Union[np.ndarray, csr_matrix], b: np.ndarray) -> np.ndarray:
         r"""
         Finds solution of :math:`\mathbf{Ax}=\mathbf{b}` using jax.numpy.linalg.solve
 
