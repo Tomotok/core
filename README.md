@@ -6,6 +6,20 @@ The documentation for the Core can be found on this [link](https://tomotok.githu
 
 The Core package of Tomotok implements various discretization algorithms that are used for tomographic reconstruction of tokamak plasmas. It is a dependency for specific packages that automate database access for a given fusion experimental device and facilitate routine tomographic computations. Together with the Core package, a simple GUI for result analysis is distributed.
 
+## Installation
+The package can be installed using pip:
+```bash
+pip install tomotok
+```
+The PyPI packages might not contain the most recent features. 
+It is recommended to install the package from source, if you want to use the latest features and do not mind the possibility of backward compatibility issues.
+
+### Source code
+The source code can be found in repository on [github](https://github.com/Tomotok/core).
+The `stable` branch ensures backward compatibility with the latest major version.
+Newest features with not fully guaranteed backward compatibility are implemented in the `development` branch. Tags follow the versions published on [PyPI](https://pypi.org/project/tomotok/).
+
+
 ## Inversions
 The algorithms accept inputs in the form of `numpy.ndarray` or `scipy.sparse` matrix objects, allowing them to run independently of the rest of the package and promoting interoperability with other codes (e.g., [ToFu](https://tofuproject.github.io/tofu/)).
 

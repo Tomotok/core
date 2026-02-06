@@ -24,9 +24,11 @@ Welcome to the Tomotok project for tomography of tokamak plasma.
 
 .. toctree::
    :numbered:
+   :maxdepth: 1
    :caption: Api Doc
 
    api/tomotok.core
+   api/tomotok.tools
 
 Indices and tables
 ------------------

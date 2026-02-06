@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 import scipy.sparse as sparse
 
-from tomotok.core.tools.hdf import sparse_to_hdf, hdf_to_sparse
+from tomotok.tools.hdf import sparse_to_hdf, hdf_to_sparse
 
 
 class Bob(object):
