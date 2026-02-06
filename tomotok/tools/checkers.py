@@ -2,30 +2,24 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Contains classes and functions for user checking of some tomography algorithm parts
+Contains classes and functions for user checks of selected inputs for tomographic inversion
 
 Examples
 --------
-Checking anisotropic derivative matrix computed from DataArray with magnetic flux surfaces `magnetic_flux`
+Checking anisotropic derivative matrix
 
->>> from tomotok.core.io import Pixgrid, Tokamak
+>>> from tomotok.core.io import RegularGrid, Tokamak
 >>> time = 1.2
 >>> shot = 19925
->>> coord = Pixgrid(50, 100, (0.5, 1), (-0.5, 0.5))
+>>> coord = RegularGrid(50, 100, (0.5, 1), (-0.5, 0.5))
 >>> magf = Tokamak.interpolate_mag_field(magnetic_flux, coord)
 >>> checker = DerivMatChecker(coord, magf)
 >>> checker(time)
-
-# TODO
-Plotting geometry matrix stored at local drive
-
->>> from tomotok.utils.gmat import load_function  # not implemented yet
->>> gmat = load_function('path/to/gmat/file')
->>> fig = check_gmat(gmat)
 """
 import matplotlib.pyplot as plt
 import numpy as np
 
+from tomotok.core.geometry.grids import RegularGrid
 from tomotok.core.derivative import prepare_mag_data, generate_anizo_matrix
 
 
@@ -36,7 +30,7 @@ class DerivMatChecker(object):
 
     Parameters
     ----------
-    coord : Pixgrid
+    grid : RegularGrid
     magfield : dict
 
     Attributes
@@ -46,9 +40,9 @@ class DerivMatChecker(object):
     fig2 :  matplotlib.figure
         contains two subplots with parallel and perpendicular parts of derivative matrix
     """
-    def __init__(self, coord, magfield):
-        self.nx, self.ny = coord.nx, coord.ny
-        self.coord = coord
+    def __init__(self, grid: RegularGrid, magfield):
+        self.nx, self.ny = grid.nr, grid.nz
+        self.coord = grid
         self.fluxes = magfield
         self.fig, self.ax = plt.subplots()
         self.fig2, self.ax2 = plt.subplots(figsize=(8, 5), nrows=1, ncols=2)
@@ -85,7 +79,7 @@ class DerivMatChecker(object):
         self.deriv1 = bper_dense.reshape(self.nx * self.ny, 3, 3)[:, :, :]
         self.deriv2 = bpar_dense.reshape(self.nx * self.ny, 3, 3)[:, :, :]
         # Central pixel index
-        ind = int(self.coord.ny / 2 * self.coord.nx + self.coord.nx / 2)
+        ind = int(self.coord.nz / 2 * self.coord.nr + self.coord.nr / 2)
 
         self.slices, rows, cols, = self.deriv1.shape
         sliced = self.deriv1[ind, :, :]
@@ -146,26 +140,3 @@ class DerivMatChecker(object):
         # tx = "Y: {}, X: {}".format(y, x)
         # print(tx)
         self.update(x, y)
-
-
-def check_gmat(gmat):
-    """
-    Checks geometry matrix by summing all channels and plotting.
-
-    Parameters
-    ----------
-    gmat : dict
-
-    Returns
-    -------
-    fig : matplotlib.pyplot.figure
-    """
-    raise NotImplementedError('Requires gmat class, grid descritpion in gmat attrs or grid as parameter')
-    fig, ax = plt.subplots()
-    sgmat = gmat.sum(0)
-    s = ax.imshow(sgmat, origin='bottom')
-    plt.colorbar(s)
-    ax.set_ylabel('y grid [px]')
-    ax.set_xlabel('x grid [px]')
-    plt.show()
-    return fig

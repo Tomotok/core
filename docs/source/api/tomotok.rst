@@ -1,10 +1,7 @@
-tomotok package
-===============
+tomotok namespace
+=================
 
-.. automodule:: tomotok
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. py:module:: tomotok
 
 Subpackages
 -----------
@@ -13,3 +10,4 @@ Subpackages
    :maxdepth: 4
 
    tomotok.core
+   tomotok.tools

@@ -16,10 +16,10 @@ from matplotlib.image import imread
 from matplotlib.patches import Rectangle
 from matplotlib.colors import TwoSlopeNorm
 
-from tomotok.core.phantoms import gauss_iso
-from tomotok.core.geometry import RegularGrid, sparse_line_3d, generate_los
+from tomotok.core.geometry import RegularGrid, sparse_line, generate_los
 from tomotok.core.derivative import derivative_matrix
 from tomotok.core.inversions import GevFastAlgebraic, Mfr, SimpleBob, SvdFastAlgebraic
+from tomotok.tools.phantoms import gauss_iso
 
 
 rcParams['text.usetex'] = True
@@ -49,8 +49,8 @@ zlim = (-0.4, 0.4)
 
 # create inversion grid with desired node size
 # grid = RegularGrid(10, 20, rlim, zlim)  # 4x4cm
-# grid = RegularGrid(20, 40, rlim, zlim)  # 2x2cm, used for paper figures
-grid = RegularGrid(40, 80, rlim, zlim)  # 1x1cm
+grid = RegularGrid(20, 40, rlim, zlim)  # 2x2cm, used for paper figures
+# grid = RegularGrid(40, 80, rlim, zlim)  # 1x1cm
 # grid = RegularGrid(80, 160, rlim, zlim)  # .5x.5cm
 
 # create line of sights for the linear arrays
@@ -65,29 +65,12 @@ s3, e3 = generate_los(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, -0.5), axis=(-
 s4, e4 = generate_los(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, 0.5), axis=(-1, 0, -1), elong=1.5)  
 
 # combine line of sights coordinates of arrays into one variable
-ss = []
-es = []
-ss.append(s1)
-es.append(e1)
-ss.append(s2)
-es.append(e2)
-ss.append(s3)
-es.append(e3)
-es.append(e4)
-ss.append(s4)
-s = np.concatenate(ss, 0)
-e = np.concatenate(es, 0)
+startpnts = np.concatenate([s1, s2, s3, s4], 0)
+endpnts = np.concatenate([e1, e2, e3, e4], 0)
 
 # reorganise for the geometry matrix computation
-chnls = np.arange(s.shape[0])
-rch = np.zeros((s.shape[0], 2))
-zch = np.zeros((s.shape[0], 2))
-rch[:, 0] = s[:, 0]
-rch[:, 1] = e[:, 0]
-zch[:, 0] = s[:, 2]
-zch[:, 1] = e[:, 2]
 
-gmat = sparse_line_3d(rch, zch, grid, rmin=.2)
+gmat = sparse_line(startpnts, endpnts, grid, rmin=.2)
 dgmat = gmat.toarray()
 
 phantom = gauss_iso(grid.nr, grid.nz, w=0.2) * 100
@@ -130,8 +113,8 @@ mout = mfr(data, gmat, derivs, errors)
 
 resolution = (80, 80)  # new camera resolution
 fov = (60, 60)
-pinhole_position = (0.8, 0.1, 0.2)
-camera_axis = (-1, -0.2, 0.25,)
+pinhole_position = (0.8, 0.2, 0.1)
+camera_axis = (-1, 0.25, -0.2,)
 
 start, end = generate_los(
     pinhole=pinhole_position,
@@ -141,22 +124,11 @@ start, end = generate_los(
     elong=3,
 )
 
-nch = start.shape[0]
-xc = np.zeros((nch, 2))
-yc = np.zeros((nch, 2))
-zc = np.zeros((nch, 2))
-xc[:, 0] = start[:, 0]
-xc[:, 1] = end[:, 0]
-yc[:, 0] = start[:, 1]
-yc[:, 1] = end[:, 1]
-zc[:, 0] = start[:, 2]
-zc[:, 1] = end[:, 2]
-
 grid2 = RegularGrid(30, 40, (.2, .8), (-.4, .4))
-gmat2 = sparse_line_3d(xc, yc, grid2, zc, rmin=.2)
+gmat2 = sparse_line(start, end, grid2, rmin=.2)
 
 grid_column = RegularGrid(1, 1, (0, 0.2, ), (-.4, .4))
-gmat_column = sparse_line_3d(xc, yc, grid_column, zc)
+gmat_column = sparse_line(start, end, grid_column)
 image_column = gmat_column.dot(np.array([1]))
 
 phantom2 = gauss_iso(grid2.nr, grid2.nz, cen=.5) * 100
@@ -199,10 +171,12 @@ lnaax[0].set_title('Linear Layout')
 lnaax[0].set_xlabel('R [-]')
 lnaax[0].set_ylabel('z [-]')
 
-lnaax[2].set_axis_off()
+# lnaax[2].set_axis_off()
+lnaax[2].set_xticks([])
+lnaax[2].set_yticks([])
 lnaax[2].set_title('Artificial Image')
 
-lnaax[0].plot(rch.T, zch.T, 'k', lw=0.5, alpha=0.5)
+lnaax[0].plot(np.vstack((startpnts[:, 0], endpnts[:, 0])), np.vstack((startpnts[:, 2], endpnts[:, 2])), 'k', lw=0.5, alpha=0.5)
 rct = Rectangle((grid.rmin, grid.zmin), grid.rmax - grid.rmin, grid.zmax - grid.zmin)
 lnaax[0].add_patch(rct, )
 
@@ -220,16 +194,20 @@ except FileNotFoundError:
     tmp = np.zeros_like(phantom2)
     tmp[18, 17] = 100
     replacement = gmat2 @ tmp.flatten()
-    replacement = replacement.reshape(resolution).T > 0
+    replacement = replacement.reshape(resolution) > 0
     lnaax[1].imshow(replacement, cmap=cmap, origin='lower')
-    lnaax[1].set_axis_off()
+    lnaax[1].text(3/40*resolution[0], 10/40*resolution[1], 'Central column', rotation='vertical')
+    lnaax[1].contour(image_column.reshape(resolution), levels=[0], colors='k', linewidths=0.5)
 
-ncimg = lnaax[2].imshow(image.reshape(resolution).T, cmap='Blues', origin='lower')
+    lnaax[1].set_xticks([])
+    lnaax[1].set_yticks([])
+
+ncimg = lnaax[2].imshow(image.reshape(resolution), cmap='Blues', origin='lower')
 nccax = lnaax[2].inset_axes(bounds=[1.1, 0, 0.05, 1])
 lna.colorbar(ncimg, cax=nccax, label='Signal [-]')
 
-lnaax[2].text(3.2/4*resolution[0], 1/4*resolution[1], 'Central column', rotation='vertical')
-lnaax[2].contour(image_column.reshape(resolution).T, levels=[0], colors='k', linewidths=0.5)
+lnaax[2].text(3/40*resolution[0], 10/40*resolution[1], 'Central column', rotation='vertical')
+lnaax[2].contour(image_column.reshape(resolution), levels=[0], colors='k', linewidths=0.5)
 
 
 # ## Figure 3
