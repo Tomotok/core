@@ -14,7 +14,6 @@ Subpackages
 
    tomotok.core.geometry
    tomotok.core.inversions
-   tomotok.core.io
 
 Submodules
 ----------

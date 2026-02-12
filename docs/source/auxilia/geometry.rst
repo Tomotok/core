@@ -16,11 +16,3 @@ Reconstruction grids
 .. autoclass:: tomotok.core.geometry.RegularGrid
     :members:
     :noindex:
-
-
-Lines of sight
---------------
-
-.. automodule:: tomotok.core.geometry.los
-    :members:
-    :noindex:

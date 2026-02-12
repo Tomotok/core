@@ -16,10 +16,11 @@ from matplotlib.image import imread
 from matplotlib.patches import Rectangle
 from matplotlib.colors import TwoSlopeNorm
 
-from tomotok.core.geometry import RegularGrid, sparse_line, generate_los
+from tomotok.core.geometry import RegularGrid, sparse_line
 from tomotok.core.derivative import derivative_matrix
 from tomotok.core.inversions import GevFastAlgebraic, Mfr, SimpleBob, SvdFastAlgebraic
 from tomotok.tools.phantoms import gauss_iso
+from tomotok.tools.sightlines import generate_sightlines
 
 
 rcParams['text.usetex'] = True
@@ -56,13 +57,13 @@ grid = RegularGrid(20, 40, rlim, zlim)  # 2x2cm, used for paper figures
 # create line of sights for the linear arrays
 num = 20  # detectors per array
 # horizontal
-s1, e1 = generate_los(num=(num, 1), fov=(70, 0), pinhole=(1, 0, 0), axis=(-1, 0, 0))  
+s1, e1 = generate_sightlines(num=(num, 1), fov=(70, 0), pinhole=(1, 0, 0), axis=(-1, 0, 0))  
 # top
-s2, e2 = generate_los(num=(num, 1), fov=(50, 0), pinhole=(0.5, 0, 0.7), axis=(0.01, 0, -1), elong=1.5)
+s2, e2 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.5, 0, 0.7), axis=(0.01, 0, -1), elong=1.5)
 # angled bottom
-s3, e3 = generate_los(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, -0.5), axis=(-1, 0, 1), elong=1.5)  
+s3, e3 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, -0.5), axis=(-1, 0, 1), elong=1.5)  
 # angled top
-s4, e4 = generate_los(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, 0.5), axis=(-1, 0, -1), elong=1.5)  
+s4, e4 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, 0.5), axis=(-1, 0, -1), elong=1.5)  
 
 # combine line of sights coordinates of arrays into one variable
 startpnts = np.concatenate([s1, s2, s3, s4], 0)
@@ -116,7 +117,7 @@ fov = (60, 60)
 pinhole_position = (0.8, 0.2, 0.1)
 camera_axis = (-1, 0.25, -0.2,)
 
-start, end = generate_los(
+start, end = generate_sightlines(
     pinhole=pinhole_position,
     axis=camera_axis,
     num=resolution, 

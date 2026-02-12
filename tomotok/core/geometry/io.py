@@ -4,42 +4,42 @@
 """
 Saving and loading functions for geometry matrices in sparse format using h5py module.
 """
-from typing import Tuple
+from pathlib import Path
 import h5py
 
 import scipy.sparse as sparse
 
+from tomotok.tools.hdf import sparse_to_hdf, hdf_to_sparse
 from .grids import RegularGrid
 
 
-def save_sparse_gmat(floc, gmat: sparse.csr_matrix, grid: RegularGrid, attrs_dct: dict=None) -> None:
+def save_sparse_gmat(floc: str | Path, gmat: sparse.sparray, grid: RegularGrid, attrs_dct: dict=None) -> None:
     """
     Saves geometry matrix together with description of the grid.
 
-    Currently suports only sparse CSR matrices and regular rectangular grids.
+    Currently supports only regular rectangular grids.
 
     Parameters
     ----------
-    floc : str
+    floc : str or pathlib.Path
         file location
-    gmat : csr_matrix
+    gmat : sparse.sparray
         with shape (#chanels, #nodes)
     grid : RegularGrid
         class describing regular grid the gmat was computed for
     attrs_dict : dict, optional
         additional attributes to be saved in hdf file
     """
-    if not isinstance(gmat, sparse.csr_matrix):
-        msg = 'This function can only save sparse gmat. ' + \
-            'For saving matrix in dense format use core.io.to_hdf function'
+    if not isinstance(gmat, sparse.sparray):
+        msg = 'This function can only save sparse geometry matrix.'
+        raise ValueError(msg)
+    if not isinstance(grid, RegularGrid):
+        msg = 'This function can only save geometry matrices computed for regular grids.'
         raise ValueError(msg)
     with h5py.File(floc, 'w') as f:
-        f.attrs['version'] = '0.1'
-        f.create_dataset('indices', data=gmat.indices)
-        f.create_dataset('indptr', data=gmat.indptr)
-        f.create_dataset('data', data=gmat.data)
-        f.attrs['format'] = gmat.format
-        f.attrs['shape'] = gmat.shape
+        f.attrs['version'] = '0.2'
+        gmg = f.create_group('gmat')
+        sparse_to_hdf(gmat, gmg)
         grp = f.create_group('grid')
         grp.create_dataset('nr', data=grid.nr)
         grp.create_dataset('nz', data=grid.nz)
@@ -51,29 +51,43 @@ def save_sparse_gmat(floc, gmat: sparse.csr_matrix, grid: RegularGrid, attrs_dct
                 f.attrs[key] = attrs_dct[key]
 
 
-def load_sparse_gmat(floc: str) -> Tuple[sparse.csr_matrix, RegularGrid]:
+def load_sparse_gmat(floc: str | Path) -> tuple[sparse.sparray, RegularGrid]:
     """
-    Loads hdf file and creates sparse csr_matrix and RegularGrid class
+    Loads hdf file and creates sparse array and RegularGrid class
 
     Parameters
     ----------
-    floc : str
+    floc : str or pathlib.Path
         hdf file location
     
     Returns
     -------
-    gmat : sparse.csr_matrix
+    gmat : sparse.sparray
     grid : geometry.RegularGrid
     """
     with h5py.File(floc, 'r') as fl:
-        data = fl['data'][:]
-        indptr = fl['indptr'][:]
-        indices = fl['indices'][:]
-        shp = fl.attrs['shape']
-        nx = fl['grid/nr'][()]
-        ny = fl['grid/nz'][()]
-        xlims = fl['grid/rlims'][()]
-        ylims = fl['grid/zlims'][()]
-    gmat = sparse.csr_matrix((data, indices, indptr), shape=shp)
-    grid = RegularGrid(nx, ny, xlims, ylims)
+        if fl.attrs['version'] == '0.1':
+            data = fl['data'][:]
+            indptr = fl['indptr'][:]
+            indices = fl['indices'][:]
+            shp = fl.attrs['shape']
+            nr = fl['grid/nr'][()]
+            nz = fl['grid/nz'][()]
+            rlims = fl['grid/rlims'][()]
+            zlims = fl['grid/zlims'][()]
+            gmat = sparse.csr_array((data, indices, indptr), shape=shp)
+        elif fl.attrs['version'] == '0.2':
+            gmat = hdf_to_sparse(fl['gmat'])
+            if fl['grid'].attrs['type'] != 'regular_rectangles':
+                raise ValueError(
+                    f'Unsupported grid type: {fl["grid"].attrs["type"]}.'+
+                    'This function can only load regular rectangular grids.'
+                )
+            nr = fl['grid/nr'][()]
+            nz = fl['grid/nz'][()]
+            rlims = fl['grid/rlims'][()]
+            zlims = fl['grid/zlims'][()]
+        else:
+            raise ValueError(f'Unsupported file version: {fl.attrs["version"]}')
+    grid = RegularGrid(nr, nz, rlims, zlims)
     return gmat, grid
