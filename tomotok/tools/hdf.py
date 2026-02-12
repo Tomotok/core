@@ -1,31 +1,24 @@
-# Copyright 2021 Institute of Plasma Physics of the Czech Academy of Sciences. 
-#
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences. 
 # Licensed under the EUPL-1.2 or later.
 """
 Handles saving and loading of sparse matrices to/from HDF files.
 
 Currently supported formats:
- - scipy.sparse.csc_matrix
- - scipy.sparse.csr_matrix
- - scipy.sparse.dia_matrix
+ - scipy.sparse.csc_array
+ - scipy.sparse.csr_array
+ - scipy.sparse.dia_array
 """
-from typing import Union
-
 import h5py
 import scipy.sparse as sparse
 
 
-Cs_type = Union[sparse.csc_matrix, sparse.csr_matrix]
-Sparse_type = Union[sparse.dia_matrix, Cs_type]
-
-
-def sparse_to_hdf(matrix: Sparse_type, group: h5py.Group):
+def sparse_to_hdf(matrix: sparse.csc_array | sparse.csr_array | sparse.dia_array, group: h5py.Group):
     """
     Saves scipy.sparse matrix of formats (csc, csr, dia) into hdf file group.
     """
-    if isinstance(matrix, sparse.dia_matrix):
+    if isinstance(matrix, sparse.dia_array):
         dia_to_hdf(matrix, group)
-    elif isinstance(matrix, (sparse.csc_matrix, sparse.csr_matrix)):
+    elif isinstance(matrix, (sparse.csc_array, sparse.csr_array)):
         cs_to_hdf(matrix, group)
     else:
         raise TypeError('Unsupported matrix type {}. Use dia, csc or csr.'.format(type(matrix)))
@@ -46,11 +39,11 @@ def hdf_to_sparse(group: h5py.Group) -> sparse.spmatrix:
     return matrix
 
 
-def dia_to_hdf(matrix: sparse.dia_matrix, group: h5py.Group):
+def dia_to_hdf(matrix: sparse.dia_array, group: h5py.Group):
     """
     Saves dia matrix to hdf group.
     """
-    if not isinstance(matrix, sparse.dia_matrix):
+    if not isinstance(matrix, sparse.dia_array):
         raise ValueError('Provided matrix is not of sparse diagonal type.')
     group.attrs['type'] = matrix.format
     group.attrs['shape'] = matrix.shape
@@ -59,25 +52,25 @@ def dia_to_hdf(matrix: sparse.dia_matrix, group: h5py.Group):
     return
 
 
-def hdf_to_dia(group: h5py.Group) -> sparse.dia_matrix:
+def hdf_to_dia(group: h5py.Group) -> sparse.dia_array:
     """
     Loads dia matrix from hdf group.
     """
     form = group.attrs['type']
-    if form != sparse.dia_matrix.format:
+    if form != sparse.dia_array.format:
         raise ValueError('Provided group attr `type` does not specify diagonal matrix.')
     shape = group.attrs['shape'][()]
     data = group['data'][:]
     offsets = group['offsets'][:]
-    matrix = sparse.dia_matrix((data, offsets), shape=shape)
+    matrix = sparse.dia_array((data, offsets), shape=shape)
     return matrix
 
 
-def cs_to_hdf(matrix: Cs_type, group: h5py.Group):
+def cs_to_hdf(matrix: sparse.csc_array | sparse.csr_array, group: h5py.Group):
     """
     Saves compressed sparse matrix to hdf group.
     """
-    if not isinstance(matrix, (sparse.csc_matrix, sparse.csr_matrix)):
+    if not isinstance(matrix, (sparse.csc_array, sparse.csr_array)):
         raise ValueError('Provided matrix is not of csc or csr type.')
     group.attrs['type'] = matrix.format
     group.attrs['shape'] = matrix.shape
@@ -87,19 +80,19 @@ def cs_to_hdf(matrix: Cs_type, group: h5py.Group):
     return
 
 
-def hdf_to_cs(group: h5py.Group) -> Cs_type:
+def hdf_to_cs(group: h5py.Group) -> sparse.csc_array | sparse.csr_array:
     """
     Loads compressed sparse matrix from hdf group.
     """
     form = group.attrs['type']
-    if form not in [sparse.csc_matrix.format, sparse.csr_matrix.format]:
+    if form not in [sparse.csc_array.format, sparse.csr_array.format]:
         raise ValueError('Provided group attr `type` does not specify csc or csr matrix.')
     shape = group.attrs['shape'][()]
     data = group['data'][:]
     indices = group['indices'][:]
     indptr = group['indptr'][:]
     if form == 'csc':
-        matrix = sparse.csc_matrix((data, indices, indptr), shape=shape)
+        matrix = sparse.csc_array((data, indices, indptr), shape=shape)
     else:
-        matrix = sparse.csr_matrix((data, indices, indptr), shape=shape)
+        matrix = sparse.csr_array((data, indices, indptr), shape=shape)
     return matrix

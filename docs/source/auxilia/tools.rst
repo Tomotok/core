@@ -1,7 +1,15 @@
 Tools
 =====
 
-Utilities complementing the core functionalities. Includes post-processing and visualizations.
+Utilities complementing the core functionalities.
+
+Sightlines
+----------
+
+.. automodule:: tomotok.tools.sightlines
+    :members:
+    :undoc-members:
+    :noindex:
 
 
 Phantom Emissivity

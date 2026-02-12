@@ -1,8 +1,7 @@
-# Copyright 2021 Institute of Plasma Physics of the Czech Academy of Sciences. 
-#
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences. 
 # Licensed under the EUPL-1.2 or later.
 """
-Contains class describing regularly spaced node grid
+Contains classes describing reconstruction grids. Currently only regular rectangular grid is implemented, but the base class allows for easy implementation of other grid types.
 """
 from typing import Tuple
 
@@ -10,9 +9,30 @@ import numpy as np
 from matplotlib.path import Path as MplPath
 
 
-class RegularGrid(object):
+class Grid(object):
     """
-    Rectangular grid of regularly spaced rectangles of same size
+    Base class for describing reconstruction grid. Should be subclassed for specific grid types.
+
+    Only toroidally symmetric grids are supported. The grid is defined in the r-z plane and extended in toroidal direction by symmetry.
+    """
+    def __init__(self):
+        return
+    
+    def vertices(self) -> np.ndarray:
+        """
+        Returns vertices of grid nodes. Should be implemented in subclass.
+
+        Returns
+        -------
+        numpy.ndarray
+            Array containing vertices of grid nodes with shape (#z, #r, #corners, 2)
+        """
+        raise NotImplementedError('Method vertices should be defined in subclass.')
+
+
+class RegularGrid(Grid):
+    """
+    Rectangular grid of regularly spaced rectangles with the same size
 
     Describes rectangular reconstruction grid consisting of regularly spaced toroidally symmetric nodes
     that have rectangular projection to reconstruction plane.
@@ -121,10 +141,12 @@ class RegularGrid(object):
         return (self.zmin, self.zmax)
 
     def __repr__(self):
-        msg = 'Node grid with resolution {}h{}'.format(self.nr, self.nz)
-        msg += ' and bounds ({};{})r, ({};{})z.'.format(*self.extent)
+        msg = f'Regular grid, {self.nz} rows, {self.nr} columns, '
+        msg += f'extent r({self.rmin};{self.rmax}), z({self.zmin};{self.zmax}).'
         return msg
 
+    # TODO: add parameter method specifying what points and condition is used
+    # any corner inside, all corners inside, center inside
     def is_inside(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
         Selects nodes with centers inside given polygon.

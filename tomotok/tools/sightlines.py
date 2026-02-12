@@ -1,12 +1,63 @@
-# Copyright 2021 Institute of Plasma Physics of the Czech Academy of Sciences. 
-#
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences. 
 # Licensed under the EUPL-1.2 or later.
 """
 Routines for generation of line of sight start and end points.
 
 Creates the lines of sights in x axis direction and then rotates them about the other horizontal axis, then about vertical axis.
 """
+import warnings
 import numpy as np
+
+
+def generate_sightlines(
+    pinhole: tuple[float, float, float] = (0, 0, 0), 
+    num: tuple[int, int] = (10, 1), 
+    fov: tuple[float, float] = (45, 0), 
+    axis: tuple[float, float, float] = (1, 0, 0), 
+    elong: float = 1.
+):
+    """
+    Creates sightlines starting at pinhole and ending at points with uniform distribution over a given field of view.
+
+    Parameters
+    ----------
+    num : int or (int,int), optional
+        number of generated chords (vertical, horizontal)
+    pinhole : tuple of three floats, optional
+        cartesian coordinates of pinhole
+    fov : float, or tuple of two float, optional
+        vertical and horizontal field of view in degrees
+    axis : tuple of three floats, optional
+        direction of symmetry axis from pinhole to the center of the field of view
+    elong : float, optional
+        elongation of the sightlines, a multiplier for the length of the direction vectors
+
+    Returns
+    -------
+    start : numpy.ndarray
+        array with line of sight start points coordinates, shape (#los, 3)
+    end : numpy.ndarray
+        array with line of sight end points coordinates, shape (#los, 3)
+    """
+    directions = generate_directions(num, fov, axis, elong)
+    start = np.full_like(directions, pinhole)
+    end = directions + pinhole
+    return np.array((start, end))
+
+
+def generate_los(pinhole=(0, 0, 0), num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
+    """
+    Creates line of sight endpoints with uniform distribution.
+
+    .. deprecated:: 2.0
+        Use `generate_sightlines` instead
+    """
+    warnings.warn(
+        'generate_los is deprecated, use generate_sightlines instead.',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return generate_sightlines(pinhole=pinhole, num=num, fov=fov, axis=axis, elong=elong)
 
 
 def generate_directions(num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
@@ -69,36 +120,6 @@ def generate_directions(num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
     if axis[0] < 0:
         dirs[:, 0] = -dirs[:, 0]
     return dirs
-
-
-def generate_los(pinhole=(0, 0, 0), num=(10, 1), fov=(45, 0), axis=(1, 0, 0), elong=1.):
-    """
-    Creates line of sight endpoints with uniform distribution.
-
-    Parameters
-    ----------
-    num : int or (int,int), optional
-        number of generated chords (vertical, horizontal)
-    pinhole : tuple of three floats, optional
-        r and z coordinates of pinhole
-    fov : float, or tuple of two float, optional
-        vertical and horizontal field of view in degrees
-    axis : tuple of three floats, optional
-        direction of chordal axis
-    elong : float, optional
-        chord length multiplier
-
-    Returns
-    -------
-    start : numpy.ndarray
-        array with line of sight start points coordinates, shape (#los, 3)
-    end : numpy.ndarray
-        array with line of sight end points coordinates, shape (#los, 3)
-    """
-    directions = generate_directions(num, fov, axis, elong)
-    start = np.full_like(directions, pinhole)
-    end = directions + pinhole
-    return np.array((start, end))
 
 
 def rot_v(points, angle):
