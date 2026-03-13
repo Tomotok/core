@@ -3,7 +3,7 @@
 """
 Contains classes describing reconstruction grids. Currently only regular rectangular grid is implemented, but the base class allows for easy implementation of other grid types.
 """
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 from matplotlib.path import Path as MplPath
@@ -15,19 +15,20 @@ class Grid(object):
 
     Only toroidally symmetric grids are supported. The grid is defined in the r-z plane and extended in toroidal direction by symmetry.
     """
-    def __init__(self):
-        return
-    
-    def vertices(self) -> np.ndarray:
+    faces: np.ndarray
+    vertices: np.ndarray
+
+    @property
+    def size(self) -> int:
         """
-        Returns vertices of grid nodes. Should be implemented in subclass.
+        Total number of nodes in the grid.
 
         Returns
         -------
-        numpy.ndarray
-            Array containing vertices of grid nodes with shape (#z, #r, #corners, 2)
+        int
+            total number of nodes in the grid
         """
-        raise NotImplementedError('Method vertices should be defined in subclass.')
+        raise NotImplementedError('Property size should be defined in subclass.')
 
 
 class RegularGrid(Grid):
@@ -57,7 +58,7 @@ class RegularGrid(Grid):
         arrays containing r resp. z coordinates of node borders
     r_center, z_center : numpy.ndarray
         arrays containing r resp. z coordinates of node centers
-    nodevol : numpy.ndarray
+    volumes : numpy.ndarray
         Array containing volumes of nodes (voxel) with shape (nz, nr)
     """
 
@@ -90,9 +91,28 @@ class RegularGrid(Grid):
         return
 
     @property
-    def nodevol(self) -> np.ndarray:
+    def vertices(self) -> np.ndarray:
+        br, bz = self.border_mesh
+        vertices = np.stack((br.flatten(), bz.flatten()), axis=1)
+        return vertices
+
+    @property
+    def faces(self) -> np.ndarray:
+        nbr = self.nr + 1
+        nbz = self.nz + 1
+        # ordinary numbers of node corners from left to right, bottom to top
+        ordinaries = np.arange(nbr*nbz).reshape((nbz, nbr))
+        bl = ordinaries[:-1, :-1].flatten()
+        br = ordinaries[:-1, 1:].flatten()
+        tl = ordinaries[1:, :-1].flatten()
+        tr = ordinaries[1:, 1:].flatten()
+        faces = np.stack((bl, br, tr, tl), axis=1)
+        return faces
+
+    @property
+    def volumes(self) -> np.ndarray:
         """
-        Volumes of individual nodes
+        Volumes of individual voxels assuming toroidal symmetry.
 
         Returns
         -------
@@ -133,6 +153,10 @@ class RegularGrid(Grid):
         return np.meshgrid(self.r_center, self.z_center)
 
     @property
+    def border_mesh(self) -> np.ndarray:
+        return np.meshgrid(self.r_border, self.z_border)
+
+    @property
     def rlims(self) -> Tuple[float, float]:
         return (self.rmin, self.rmax)
 
@@ -145,29 +169,61 @@ class RegularGrid(Grid):
         msg += f'extent r({self.rmin};{self.rmax}), z({self.zmin};{self.zmax}).'
         return msg
 
-    # TODO: add parameter method specifying what points and condition is used
-    # any corner inside, all corners inside, center inside
-    def is_inside(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
+    def is_inside(self, r: np.ndarray, z: np.ndarray, method: str = 'center') -> np.ndarray:
         """
         Selects nodes with centers inside given polygon.
 
         Parameters
         ----------
         r, z : numpy.ndarray
-            Coordinate vectors of polygon
+            Coordinates of polygon points
+        method : str, optional
+            method for selecting nodes, by default 'center', other options are 'any' and 'all'
 
         Returns
         -------
         numpy.ndarray
             Mask matrix for pixgrid with True values for nodes inside polygon
         """
-        rm, zm = np.meshgrid(self.r_center, self.z_center)
+        if method == 'center':
+            inside = self.is_inside_center(r, z)
+        elif method == 'any':
+            inside = self.is_inside_any(r, z)
+        elif method == 'all':
+            inside = self.is_inside_all(r, z)
+        else:
+            raise ValueError(f'Unknown method {method} for selecting nodes inside polygon.')
+        return inside
+
+    def inside_corners(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
+        """
+        Counts how many corners of each node are inside given polygon.
+
+        Parameters
+        ----------
+        r, z : numpy.ndarray
+            Coordinates of polygon points
+
+        Returns
+        -------
+        numpy.ndarray
+            number of corners inside polygon for each node, shape (#z, #r)
+        """
+        rm, zm = np.meshgrid(self.r_border, self.z_border)
         rm, zm = rm.flatten(), zm.flatten()
         points = np.stack((rm, zm), axis=1)
         limiter_coords = np.stack((r, z), axis=1)
         p = MplPath(limiter_coords)
-        grid_points = p.contains_points(points)
-        inside = grid_points.reshape(self.shape)
+        corners = p.contains_points(points)
+        corners = corners.reshape((self.nz+1, self.nr+1))
+        inside = np.zeros(self.shape, dtype=int)
+        for i in range(self.nz):
+            for j in range(self.nr):
+                bl = corners[i, j]
+                br = corners[i, j+1]
+                tl = corners[i+1, j]
+                tr = corners[i+1, j+1]
+                inside[i, j] = sum([bl, br, tl, tr])
         return inside
     
     def is_inside_any(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
@@ -182,30 +238,56 @@ class RegularGrid(Grid):
         Returns
         -------
         numpy.ndarray
-            Mask matrix for pixgrid with True values for nodes inside polygon
+            Mask matrix with True values for nodes with at least one corner inside polygon
         """
-        rm, zm = np.meshgrid(self.r_border, self.z_border)
+        inside = self.inside_corners(r, z)
+        return inside > 0
+
+    def is_inside_all(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
+        """
+        Selects nodes with all corners inside given polygon.
+
+        Parameters
+        ----------
+        r, z : numpy.ndarray
+            Coordinate vectors of polygon
+
+        Returns
+        -------
+        numpy.ndarray
+            Mask matrix with True values for nodes with all corners inside polygon
+        """
+        inside = self.inside_corners(r, z)
+        return inside == 4
+
+    def is_inside_center(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
+        """
+        Selects nodes with centers inside given polygon.
+
+        Parameters
+        ----------
+        r, z : numpy.ndarray
+            Coordinate vectors of polygon
+
+        Returns
+        -------
+        numpy.ndarray
+            Mask matrix with True values for nodes with centers inside polygon
+        """
+        rm, zm = np.meshgrid(self.r_center, self.z_center)
         rm, zm = rm.flatten(), zm.flatten()
         points = np.stack((rm, zm), axis=1)
         limiter_coords = np.stack((r, z), axis=1)
         p = MplPath(limiter_coords)
-        corners = p.contains_points(points)
-        corners = corners.reshape((self.nz+1, self.nr+1))
-        inside = np.zeros(self.shape, dtype=bool)
-        for i in range(self.nz):
-            for j in range(self.nr):
-                bl = corners[i, j]
-                br = corners[i, j+1]
-                tl = corners[i+1, j]
-                tr = corners[i+1, j+1]
-                inside[i, j] = any([bl, br, tl, tr])
+        grid_points = p.contains_points(points)
+        inside = grid_points.reshape(self.shape)
         return inside
 
-    def corners(self, mask: np.ndarray=None) -> np.ndarray:
+    def corners(self, mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Creates an array with r, z coordinates of node corners. 
         
-        Corners are in clockwise order starting with top left corner.
+        Corners are in clockwise order starting from top left.
 
         Parameters
         ----------
@@ -217,15 +299,11 @@ class RegularGrid(Grid):
         numpy.ndarray
             corner coordinates for each node in reconstruction plane, shape (#z, #r, 4, 2)
         """
-        corners = np.empty((*self.shape, 4, 2))
-        # top left
-        tl = np.meshgrid(self.r_border[:-1], self.z_border[1:])
-        # top rigth
-        tr = np.meshgrid(self.r_border[1:], self.z_border[1:])
-        # bottom right
-        br = np.meshgrid(self.r_border[1:], self.z_border[:-1])
-        # bottom left
-        bl = np.meshgrid(self.r_border[:-1], self.z_border[:-1])
+        mesh_r, mesh_z = self.border_mesh
+        tl = (mesh_r[1:, :-1], mesh_z[1:, :-1])  # top left
+        tr = (mesh_r[1:, 1:], mesh_z[1:, 1:])  # top right
+        br = (mesh_r[:-1, 1:], mesh_z[:-1, 1:])  # bottom right
+        bl = (mesh_r[:-1, :-1], mesh_z[:-1, :-1])  # bottom left
         
         corners = np.stack((tl, tr, br, bl)).transpose(2, 3, 0, 1)
         if mask is not None:

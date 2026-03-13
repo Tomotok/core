@@ -6,13 +6,53 @@ Contains functions that can create emissivity phantoms.
 
 Both isotropic one or based on the shape of flux surfaces.
 """
+from typing import Union, Tuple
+from warnings import warn
+
 import numpy as np
+
+
+def elliptical_flux(radial_num: int, vertical_num: int, span: Union[float, Tuple[float, float]] = 1.5) -> np.ndarray:
+    """
+    Creates matrix of artificial flux surfaces with elliptical shape.
+
+    Minimum values at the border are determined by the span parameter.
+
+    Parameters
+    ----------
+    radial_num : int
+        number of nodes along radial axis
+    vertical_num : int
+        number of nodes along vertical axis
+    span : float or tuple of two floats, optional
+        flux value at the center of grid edge
+        if tuple, first value is for radial axis, second for vertical
+    
+    Returns
+    -------
+    numpy.ndarray
+        Matrix with generated fluxes
+    """
+    if isinstance(span, tuple):
+        if len(span) != 2:
+            raise ValueError('Span parameter must be float or tuple of two floats.')
+        span_r, span_v = span
+    else:
+        span_r = span_v = span
+    radial = np.linspace(-span_r, span_r, radial_num)
+    vertical = np.linspace(-span_v, span_v, vertical_num)
+    radial, vertical = np.meshgrid(radial, vertical)
+    fluxes = np.sqrt(radial ** 2 + vertical ** 2)
+    return fluxes
 
 
 def iso_psi(nx, ny, span=1.5):
     """
     Creates matrix of artificial isotropic psi profile with border values for
     each axis equal to span.
+
+    .. deprecated:: 2.0
+        Use :func:`elliptical_flux` instead.
 
     Parameters
     ----------
@@ -28,6 +68,10 @@ def iso_psi(nx, ny, span=1.5):
     numpy.ndarray
         Matrix with generated profile
     """
+    warn(
+        "Function iso_psi is deprecated and will be removed in future versions. Use elliptical_flux instead.", DeprecationWarning,
+        stacklevel=2
+    )
     x = np.linspace(-span, span, nx)
     y = np.linspace(-span, span, ny)
     mx, my = np.meshgrid(x, y)
@@ -75,7 +119,14 @@ def gauss_iso(nx, ny, span=1.2, w=.1, lim=1, amp=1, cen=0):
     """
     Creates isotropic gaussian distribution.
     See references for iso_psi and gauss
+
+    .. deprecated:: 2.0
+        Use :func:`gaussian_on_flux` instead.
     """
+    warn(
+        "Function gauss_iso is deprecated and will be removed in future versions. Use gaussian_on_flux instead.", DeprecationWarning,
+        stacklevel=2
+    )
     x = iso_psi(nx, ny, span)
     res = gauss(x, w, lim, amp, cen)
     return res
@@ -121,7 +172,63 @@ def polar_phase(x, num=3, shift=0):
 def islands(psi, w=.01, lim=1, amp=1, cen=0.4, num=3, shift=0):
     """
     Creates island like phantom from given psi profile. See references for gauss and polar_phase.
+
+    See also
+    --------
+    gauss, polar_phase
     """
     res = gauss(psi, w, lim, amp, cen)
     res = polar_phase(res, num, shift)
+    return res
+
+
+def gaussian_on_flux(
+    flux: np.ndarray, amplitude: float = 1, center: float = 0, width: float = 0.1, 
+    limit: float = 1, limit_width: float = 0.2, limit_power: int = 2
+    ):
+    r"""
+    Creates anisotropic gaussian artificial emissivity by 1D transform of x
+
+    .. math::
+        f = amp \left( \mathrm{e}^{-(x-cen)^2 / w } - \mathrm{e}^{-(lim-cen)^2 / w)} \right)
+
+    Can be used on np.ndarray. Lim should be greater than cen.
+
+    Parameters
+    ----------
+    flux : np.ndarray
+        Flux values for transformation
+    amplitude : float, optional
+        maximum of gaussian profile, 
+    center : float, optional
+        center of gaussian profile
+        allows hollow profile generation when mapped on psi
+    width : float, optional
+        width of gaussian profile    
+    limit : float, optional
+        flux value where emissivity is forced to reach zero
+        if flux > limit emissivity is set to zero
+    limit_width : float, optional
+        width of transition from gaussian profile to zero at limit value of flux
+    limit_power : float, optional
+        power of polynomial transition from gaussian profile to zero at limit value of flux
+
+    Returns
+    -------
+    numpy.ndarray
+        Transformed values of x with same dimensions
+    """
+    center_dst_sq = (flux - center) * (flux - center)
+    res = np.exp(-center_dst_sq / width)
+
+    lim_start = limit - limit_width
+    edge_poly = (limit - center) * (limit - center)
+    edge_poly = ((flux - lim_start)/ limit_width) ** limit_power
+    # tlim = tx / (lim - cen)**2
+    limit_value = np.exp(-(limit - center)**2 / width)
+    result_modifier = limit_value * edge_poly
+    result_modifier[flux<lim_start] = 0
+    res -= result_modifier
+    res = np.where(res < 0, 0, res)
+    res *= amplitude
     return res

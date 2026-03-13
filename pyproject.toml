@@ -1,6 +1,29 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "tomotok"
+dynamic = ["version"]
+description = "Collection of algorithms used for tokamak plasma tomography"
+readme = "README.md"
+license = "EUPL-1.2"
+authors = [
+    { name = "Jakub Svoboda", email = "svoboda@ipp.cas.cz" },
+    { name = "Martin Imrisek"},
+    { name = "Ondrej Ficker"},
+    { name = "Jordan Cavalier"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.0.0",
+    "scipy>=1.13.0",
+    "matplotlib>=2.2.2",
+    "h5py>=2.7.1"
+]
+
+[project.urls]
+Homepage = "https://github.com/tomotok/core"
+
+[setuptools.dynamic]
+version = { file = "tomotok/core/VERSION" }
