@@ -9,108 +9,157 @@ It is a simplified form of wavelet-vaguelette decomposition algorithm by R. Nguy
 .. [BOB2] R. Nguyen van Yen et al., Nucl. Fusion 52 (2011): 013005
 """
 import warnings
+from pathlib import Path
 
 import h5py
 import numpy as np
-import scipy.sparse as sparse
+from scipy import sparse
+from scipy.sparse import linalg as sp_linalg
 
+from .base import Solver, Engine, CholeskyEngine
 from tomotok.tools.hdf import sparse_to_hdf, hdf_to_sparse
 
 
-class Bob(object):
-    """
+class Bob(Solver):
+    r"""
     BiOrthogonal Basis decomposition
 
     Attributes
     ----------
-    basis : scipy.sparse.dia_matrix
+    basis : scipy.sparse.spmatrix
         :math:`\mathbf{b}_i` basis vectors of reconstruction plane
+    basis_inv : scipy.sparse.spmatrix
+        inverse of basis matrix, used for transformation to node basis
     dec_mat : scipy.sparse.csr_matrix
         :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
-    dec_mat_normed : scipy.sparse.csr_matrix
-        normalised decomposed matrix
     norms : numpy.ndarray
         node norms used in thresholding
     """
-
-    def __init__(self, dec_mat=None, basis=None):
+    def __init__(
+        self,
+        engine: Engine | None = None,
+        dec_mat: sparse.sparray | None = None,
+        basis: sparse.sparray | None = None,
+    ):
         """
         Parameters
         ----------
-        dec_mat : scipy.sparse.csr_matrix, optional
+        engine : Engine, optional
+            engine for solving linear systems in decomposition, by default CholeskyEngine
+        dec_mat : scipy.sparse.sparray, optional
             previously decomposed matrix, avoids recomputation of decomposition when provided
-        basis : array_like, optional
+        basis : scipy.sparse.sparray, optional
             A set of basis vectors used for decomposition
         """
-        # TODO one parameter holding both dec_mat and basis?
-        super().__init__()
-        self.basis = basis
-        self.dec_mat = dec_mat
-        self.norms = None
-        self.dec_mat_normed = None
-        return
+        engine = engine or CholeskyEngine()
+        super().__init__(engine=engine)
+        self._basis = basis
+        self._adjoint_basis = dec_mat
+        self._norms: np.ndarray | None = None
 
-    def decompose(self, gmat, basis, reg_factor=0, solver_kw: dict=None):
+    # @property
+    # def basis(self):
+    #     return self._basis
+
+    # @basis.setter
+    # def basis(self, value):
+    #     if value is not None:
+    #         basis = sparse.csc_array(value)
+    #     self._basis = basis
+
+    def decompose(
+        self,
+        gmat: sparse.csr_array | sparse.csc_array,
+        basis: sparse.csc_array,
+        reg_factor: float = 0,
+    ):
         """
         Decomposes the geometry matrix using basis vectors
 
         Parameters
         ----------
-        gmat : scipy.sparse.csr_matrix
+        gmat : scipy.sparse.csr_array or scipy.sparse.csc_array
             geometry/contribution matrix
-        basis : sparse matrix
-            matrix with basis vectors
+        basis : sparse array
+            matrix with decomposition basis vectors
         reg_factor : float, optional
             regularisation factor passed to cholesky decomposition
             determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
         solver_kw : dict
-            keyword parameters passed to the solver function
+            keyword parameters passed to the compute_coefficients method
+
+        See Also
+        --------
+        compute_coefficients : method handling computation of coefficients to see supported solver keywords
         """
-        solver_kw = solver_kw or {}
-        if gmat.shape[0] < gmat.shape[1]:
-            warnings.warn('Biorthogonal algorithm requires more lines of sights than nodes in reconstruction plane to run reliably')
-        self.basis = basis
-        image_base = gmat.dot(self.basis)  # e_i previously known as chi, gmat in basis
-        a = image_base.T.dot(image_base).toarray()  # symmetrized geometry matrix in basis
+        los_num = gmat.shape[0]
+        node_num = gmat.shape[1]
+        if los_num < node_num:
+            warnings.warn(
+                'Biorthogonal algorithm requires more lines of sights than nodes in reconstruction plane to run reliably',
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        self._basis = basis
+        self.basis_inv = sp_linalg.inv(self._basis)
+        projection_basis = gmat @ self._basis  # A with columns of a_i, projections of decomposition basis
+        ata = (projection_basis.T @ projection_basis)  # <A^T|A> symmetrized projections
         if reg_factor:
-            a = a + a.max() * reg_factor * np.eye(*a.shape)
-        b = np.eye(gmat.shape[1])
-        res = np.linalg.lstsq(a, b, **solver_kw)
-        c = sparse.csr_matrix(res[0])  # coefficient matrix
-        self.dec_mat = image_base.dot(c)  # \hat{e}_i previously known as xi, decomposed matrix
+            ata = ata + ata.max() * reg_factor * sparse.eye_array(*ata.shape, format='csc')
+        c = self.compute_coordinates(ata)  # coordinate matrix
+        self._adjoint_basis = projection_basis @ c  # \hat{b}_i previously known as xi
         return
 
-    def __call__(self, data, gmat=None, thresholding=None, **kw):
-        """
-        Decomposes geometry matrix and projects images
+    def compute_coordinates(self, a: sparse.csc_array) -> sparse.csr_array:
+        """Computes coordinate matrix for transformation to reconstruction plane."""
+        b = np.eye(a.shape[0])
+        c = self.engine.solve(a, b)
+        return sparse.csr_array(c)
+
+    def __call__(
+        self, 
+        data: np.ndarray,
+        gmat: np.ndarray | sparse.csr_array | None = None,
+        basis: np.ndarray | sparse.sparray | None = None,
+    ) -> np.ndarray:
+        """Executes the inversion using 
+        
+        Checks whether decomposition is available and if not performs decomposition before projection.projects images
 
         Parameters
         ----------
         data : numpy.ndarray
-            contains signals with shape (# channels, # time slices)
-        gmat : scipy.sparse.csr_matrix
-            geometry matrix
-        thresholding : float, optional
-            not implemented
-        
+            contains signals or flattened images with shape (#channels, ) or (# channels, # time slices),
+            each column of the input represents one time slice
+        gmat : scipy.sparse.csr_array, optional
+            geometry matrix, required if decomposition was not calculated or provided in init,
+            by default None, using previously calculated decomposition stored in the class instance
+        kw : dict
+            keyword parameters passed to decompose method, used only if gmat is provided and decomposition needs to be calculated, otherwise ignored
+
         Returns
         -------
         numpy.ndarray
             inversion results with shape (# nodes, # time slices)
+
+        See Also
+        --------
+        decompose : method handling decomposition of geometry matrix to see supported keyword parameters
         """
-        # TODO transpose data and res?
-        if thresholding is not None:
-            warnings.warn('Thresholding not implemented to call method. Ignoring.')
-        if self.dec_mat is None:
-            if gmat is None:
-                raise ValueError('Gmat must be provided for decomposition')
+        if self._adjoint_basis is None:
+            if gmat is None or basis is None:
+                msg = 'Decomposition is not calculated. Execute decomposition before inversion or'
+                msg += 'provide `gmat` and `basis` to perform decomposition.'
+                raise ValueError(msg)
             else:
-                self.decompose(gmat)
-        coeffs = self.dec_mat.T.dot(data)  # coordinates in reconstruction basis
-        res = self.basis.dot(coeffs)  # result in node basis
+                basis = sparse.csc_array(basis)
+                gmat = sparse.csr_array(gmat)
+                self.decompose(gmat, basis)
+        coeffs = self._adjoint_basis.T @ data  # coordinates in decomposition basis
+        res = self.basis_inv.T @ coeffs
         return res
 
-    def save_decomposition(self, floc, description=''):
+    def save_decomposition(self, floc: str | Path, description: str = '') -> None:
         """
         Saves decomposition matrix and basis to hdf file. Norms are also included if calculated.
 
@@ -121,24 +170,24 @@ class Bob(object):
         description : str, optional
             short user description for file identification
         """
-        if self.dec_mat is None:
+        if self._adjoint_basis is None:
             raise ValueError('Can not save decomposition before it is calculated.')
         floc = str(floc)
         with h5py.File(floc, 'w') as f:
             f.attrs['version'] = '0.1'
             f.attrs['description'] = description
             dec_mat = f.create_group('decomposed_matrix')
-            sparse_to_hdf(self.dec_mat, dec_mat)
+            sparse_to_hdf(self._adjoint_basis, dec_mat)
             basis = f.create_group('basis')
-            sparse_to_hdf(self.basis, basis)
-            if self.norms is not None:
-                f.create_dataset('norms', data=self.norms)
-    
-    def load_decomposition(self, floc):
+            sparse_to_hdf(self._basis, basis)
+            if self._norms is not None:
+                f.create_dataset('norms', data=self._norms)
+
+    def load_decomposition(self, floc: str | Path) -> None:
         """
         Loads decomposed matrix and basis from an HDF file.
 
-        Norms are loaded only if available in file.
+        Norms are loaded only if available in the file.
 
         Parameters
         ----------
@@ -146,56 +195,38 @@ class Bob(object):
             location of hdf file with saved decomposition
         """
         with h5py.File(floc, 'r') as f:
-            self.dec_mat = hdf_to_sparse(f['decomposed_matrix'])
-            self.basis = hdf_to_sparse(f['basis'])
+            self._adjoint_basis = hdf_to_sparse(f['decomposed_matrix'])
+            self._basis = hdf_to_sparse(f['basis'])
             try:
-                self.norms = f['norms'][:]
+                self._norms = f['norms'][:]
             except KeyError:
-                self.norms = None
-        return
+                self._norms = None
+        self.basis_inv = sp_linalg.inv(self._basis)
 
-    def normalise(self, precision=1e-6):
+    def normalise(self, precision: float = 1e-6) -> None:
         """
-        Computes normalised decomposition matrix.
-
-        Parameters
-        ----------
-        precision : float, optional
-            neglects decomposition matrix rows with lower norm, by default 1e-6
-        """
-        image_base_adj = self.dec_mat
-        kappa = sparse.linalg.norm(image_base_adj, axis=0)
-        idx = kappa > precision
-        norms = np.zeros(kappa.size)
-        norms[idx] = (1 / kappa[idx])
-        # xi_norm
-        self.dec_mat_normed = image_base_adj.multiply(sparse.csr_matrix(norms))
-        self.norms = norms[:, None]  # change to expected shape
-    
-    def _normalise_wo_mat(self, precision=1e-6):
-        """
-        Computes norms for reconstruction nodes.
+        Computes normalisation factors for decomposition matrix.
 
         Parameters
         ----------
         precision : float, optional
             neglects decomposition matrix rows with lower norm, by default 1e-6
         """
-        image_base_adj = self.dec_mat
-        kappa = sparse.linalg.norm(image_base_adj, axis=0)
+        adjoint_basis = self._adjoint_basis
+        kappa = sparse.linalg.norm(adjoint_basis, axis=0)
         idx = kappa > precision
         norms = np.zeros(kappa.size)
         norms[idx] = (1 / kappa[idx])
-        self.norms = norms[:, None]  # change to expected shape
+        self._norms = norms  # change to expected shape
 
-    def thresholding(self, image, c: int, precision: float=1e-6, conv: float=1e-9):
+    def thresholding(self, image: np.ndarray, c: int, precision: float = 1e-6, conv: float = 1e-9) -> np.ndarray:
         """
         Applies thresholding method to provided image.
 
         Parameters
         ----------
         image : numpy.ndarray
-            flattened image with shape (#pixels, 1)
+            flattened image with shape (#pixels,)
         c : int
             thresholding sensitivity constant
         precision : float, optional
@@ -206,114 +237,74 @@ class Bob(object):
         Returns
         -------
         numpy.ndarray
+            thresholded inversion result with shape (#pixels,)
 
         Raises
         ------
         RuntimeError
             If thresholding is called before decomposition of geometry matrix
         """
-        if self.dec_mat is None:
+        if self._adjoint_basis is None:
             raise RuntimeError('Decomposition must be computed prior to thresholding.')
-        if self.norms is None:
+        if self._norms is None:
             self.normalise(precision)
 
+        if not image.size == self._adjoint_basis.shape[0]:
+            raise ValueError('Image size does not match decomposition matrix shape.')
+        elif image.ndim > 1:
+            image = image.flatten()  # ensure image is flattened to expected shape (#pixels,)
+            warnings.warn(
+                'Image has more than one dimension, flattening to expected shape (#pixels,).',
+                RuntimeWarning,
+                stacklevel=2
+            )
         # calculate plane basis coefficients
-        coeffs = self.dec_mat.T @ image
+        coeffs = self._adjoint_basis.T @ image
 
         # thresholding loop
-        a = np.abs(coeffs * self.norms)  # normalised coefficients
-        threshold_2 = np.sqrt(c**2 / a.size * a.T.dot(a))
+        a = np.abs(coeffs * self._norms)  # normalised coefficients
+        threshold_2 = np.sqrt(c**2 / a.size * a.T @ a)
         threshold_1 = 0
         while np.abs(threshold_1-threshold_2) >= conv:
             threshold_1 = threshold_2
             a_temp = a[a <= threshold_1]
-            threshold_2 = np.sqrt(c**2 / a_temp.size * a_temp.T.dot(a_temp))
+            threshold_2 = np.sqrt(c**2 / a_temp.size * a_temp.T @ a_temp)
 
         # remove plane basis with contributions below threshold and transform to nodes
         coeffs[a < threshold_2] = 0
-        out = self.basis @ coeffs
+        out = self._basis @ coeffs
         return out
 
-
-class SimpleBob(Bob):
-    """
-    Automatically creates simple one node basis as an sparse identity matrix
-
-    .. deprecated:: 1.1
-    """
-
-    def __init__(self, dec_mat=None, basis=None):
-        warnings.warn('SimpleBob is deprecated since v1.1', DeprecationWarning)
-        super().__init__(dec_mat, basis)
-    
-    def decompose(self, gmat, basis=None):
-        if basis is not None:
-            warnings.warn('Ignoring basis input')
-        basis = sparse.eye(gmat.shape[1])
-        return super().decompose(gmat, basis)
-
-
-class SparseBob(Bob):
-    """
-    Biorthogonal Basis Decomposition optimized for sparse matrices using inverse matrix calculation.
-    """
-
-    def decompose(self, gmat, basis, reg_factor=0, solver_kw=None):
-        if solver_kw is not None:
-            raise TypeError('scipy.sparse.linalg.inv does not take any keywords')
-        if gmat.shape[0] < gmat.shape[1]:
-            warnings.warn('Biorthogonal algorithm requires more '
-            'lines of sights than nodes in reconstruction plane to run reliably')
-        self.basis = basis
-        image_base = gmat.dot(self.basis)  # chi
-        a = image_base.T.dot(image_base)
-        if reg_factor:
-            a = a + a.max() * reg_factor * sparse.eye(*a.shape)
-        try:
-            c = sparse.linalg.inv(a)
-        except RuntimeError:
-            raise ValueError('Singular symmetrized matrix factor. Try increasing regularisation factor.')
-        self.dec_mat = image_base.dot(c)  # xi
-        return
-
-
-class CholmodBob(Bob):
-    """
-    Decomposition optimized for sparse matrices using Cholesky decomposition
-
-    Uses sksparse.cholmod.cholesky to solve the decomposition
-    Requires positive definite symmetrized geometry matrix in reconstruction plane basis.
-    """
-
-    def decompose(self, gmat, basis, reg_factor=1e-3, solver_kw=None):
+    def invert(self, data: np.ndarray) -> np.ndarray:
         """
-        Decomposes geometry matrix using Cholesky decomposition and projects images
+        Uses decomposed matrix to project data into reconstruction plane and then transform to node basis.
 
         Parameters
         ----------
-        gmat : scipy.sparse.csr_matrix
-            geometry/contribution matrix
-        basis : sparse matrix
-            matrix with basis vectors
-        reg_factor : float, optional
-            regularisation factor passed to cholesky decomposition
-            determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
-        solver_kw : dict
-            keyword parameters passed to the solver function
+        data : numpy.ndarray
+            contains signals with shape (# channels, # time slices)
+
+        Returns
+        -------
+        numpy.ndarray
+            inversion results with shape (# nodes, # time slices)
         """
-        solver_kw = solver_kw or {}
-        from sksparse.cholmod import cholesky, CholmodNotPositiveDefiniteError
-        if gmat.shape[0] < gmat.shape[1]:
-            warnings.warn('Biorthogonal algorithm can be prone to failure if there are more '
-            'lines of sights than nodes in reconstruction plane')
-        self.basis = basis
-        image_base = gmat.dot(self.basis)  # chi
-        a = image_base.T.dot(image_base)
+        coeffs = self._adjoint_basis.T @ data
+        res = coeffs.T @ self.basis_inv
+        return res
+
+
+class SparseInvEngine(Engine):
+    """Engine for solving linear systems in BOB decomposition using sparse inverse from scipy."""
+    def solve(self, a: np.ndarray | sparse.sparray, b: np.ndarray | sparse.sparray) -> sparse.sparray:
+        if isinstance(a, np.ndarray):
+            a = sparse.csc_array(a)
+        if sparse.issparse(b):
+            b = b.toarray()
+        if not np.allclose(b, np.eye(a.shape[0])):  # check whether RHS is identity matrix
+            raise ValueError('SparseInvEngine is designed to solve for identity matrix as RHS `b`')
         try:
-            factor = cholesky(a, a.max()*reg_factor, **solver_kw)
-        except CholmodNotPositiveDefiniteError:
-            raise ValueError('Symmetrized matrix was not positive definite. Try increasing regularisation factor.')
-        b = sparse.csc_matrix(np.eye(gmat.shape[1]))
-        c = factor(b)
-        self.dec_mat = image_base.dot(c)  # xi
-        return
+            c = sp_linalg.inv(a)
+        except RuntimeError:
+            raise ValueError('Singular symmetrized matrix factor. Try increasing regularisation factor.')
+        return c

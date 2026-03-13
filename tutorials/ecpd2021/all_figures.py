@@ -12,13 +12,16 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import rcParams
-from matplotlib.image import imread
 from matplotlib.patches import Rectangle
-from matplotlib.colors import TwoSlopeNorm
+from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
+from scipy import sparse
 
 from tomotok.core.geometry import RegularGrid, sparse_line
 from tomotok.core.derivative import derivative_matrix
-from tomotok.core.inversions import GevFastAlgebraic, Mfr, SimpleBob, SvdFastAlgebraic
+from tomotok.core.inversions import Bob, Tikhonov, PearsonSelector
+from tomotok.core.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
+from tomotok.core.inversions.mfr import MinimumFisherRegularisation
+from tomotok.core.regularisation import regularisation_matrix
 from tomotok.tools.phantoms import gauss_iso
 from tomotok.tools.sightlines import generate_sightlines
 
@@ -29,10 +32,6 @@ rcParams['figure.dpi'] = 200
 rcParams['image.origin'] = 'lower'
 rcParams['image.cmap'] = 'RdBu'
 rcParams['lines.linewidth'] = 1
-
-svd = SvdFastAlgebraic()
-gev = GevFastAlgebraic()
-mfr = Mfr()
 
 save = False
 
@@ -59,11 +58,11 @@ num = 20  # detectors per array
 # horizontal
 s1, e1 = generate_sightlines(num=(num, 1), fov=(70, 0), pinhole=(1, 0, 0), axis=(-1, 0, 0))  
 # top
-s2, e2 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.5, 0, 0.7), axis=(0.01, 0, -1), elong=1.5)
+s2, e2 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.5, 0, 0.7), axis=(0.01, 0, -1), length=1.5)
 # angled bottom
-s3, e3 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, -0.5), axis=(-1, 0, 1), elong=1.5)  
+s3, e3 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, -0.5), axis=(-1, 0, 1), length=1.5)  
 # angled top
-s4, e4 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, 0.5), axis=(-1, 0, -1), elong=1.5)  
+s4, e4 = generate_sightlines(num=(num, 1), fov=(50, 0), pinhole=(0.9, 0, 0.5), axis=(-1, 0, -1), length=1.5)  
 
 # combine line of sights coordinates of arrays into one variable
 startpnts = np.concatenate([s1, s2, s3, s4], 0)
@@ -82,27 +81,31 @@ sig = gmat.dot(phantom.flatten())
 # ampl_noise = sig.max() * 0.02
 # sig += np.random.normal(0, ampl_noise, sig.size)
 
-data = sig.reshape(1, -1)  # data should have shape (#time slices, #channels/pixels)
-
 # expected error in data
 errors = 0.001
 # derivative matrices for the inversion
 derivs = [
-    [derivative_matrix(grid, 'right'), derivative_matrix(grid, 'top')],
-    [derivative_matrix(grid, 'top'), derivative_matrix(grid, 'left')],
+    derivative_matrix(grid, 'right', compensate_edges=False),
+    derivative_matrix(grid, 'top', compensate_edges=False),
+    derivative_matrix(grid, 'top', compensate_edges=False),
+    derivative_matrix(grid, 'left', compensate_edges=False),
 ]
+regularisation = regularisation_matrix(derivs)
 
+svd = SvdAlgebraic(num=None, regularisation_selector=FastSelector(method='logmean'))
 ela = time.time()
-sout = svd(data, dgmat, derivatives=derivs, errors=errors, method='logmean')
+sout = svd(sig, dgmat, regularisation, errors=errors)
 ela = time.time() - ela
 print('svd', ela, 's')
 
+gev = GevAlgebraic(num=None, regularisation_selector=FastSelector(method='logmean'))
 ela = time.time()
-gout = gev(data, dgmat, derivs, errors, method='logmean')
+gout = gev(sig, gmat, regularisation, errors=errors)
 ela = time.time() - ela
 print('gev', ela, 's')
 
-mout = mfr(data, gmat, derivs, errors)
+mfr = MinimumFisherRegularisation(Tikhonov(regularisation_selector=PearsonSelector(bounds=(-15, 0), iter_max=20)))
+mout = mfr(sig, gmat, derivs, errors)
 
 
 # # Matrix Camera
@@ -119,38 +122,42 @@ camera_axis = (-1, 0.25, -0.2,)
 
 start, end = generate_sightlines(
     pinhole=pinhole_position,
-    axis=camera_axis,
     num=resolution, 
     fov=fov, 
-    elong=3,
+    axis=camera_axis,
+    length=3,
 )
 
 grid2 = RegularGrid(30, 40, (.2, .8), (-.4, .4))
 gmat2 = sparse_line(start, end, grid2, rmin=.2)
 
-grid_column = RegularGrid(1, 1, (0, 0.2, ), (-.4, .4))
+grid_column = RegularGrid(1, 1, (0, 0.2, ), (-.4, .4))  # single node grid for the column projection
 gmat_column = sparse_line(start, end, grid_column)
-image_column = gmat_column.dot(np.array([1]))
+image_column = gmat_column @ np.array([1])
 
 phantom2 = gauss_iso(grid2.nr, grid2.nz, cen=.5) * 100
 image = gmat2.dot(phantom2.reshape(-1, 1))
 derivs2 = [
-    [derivative_matrix(grid2, 'right'), derivative_matrix(grid2, 'top')],
-    [derivative_matrix(grid2, 'left'), derivative_matrix(grid2, 'bottom')],
+    derivative_matrix(grid2, 'right'),
+    derivative_matrix(grid2, 'top'),
+    derivative_matrix(grid2, 'left'),
+    derivative_matrix(grid2, 'bottom'),
 ]
 
-bob = SimpleBob()
+basis = sparse.diags_array([1], shape=(grid2.size, grid2.size))
+bob = Bob()
 ela2 = time.time()
-bob.decompose(gmat2)
+bob.decompose(gmat2.tocsc(), basis)
 ela2 = time.time() - ela2
 
 bout = bob(image, gmat2)
-mout2 = mfr(
-    data=image.reshape(1, -1), 
+
+mfr2 = MinimumFisherRegularisation(Tikhonov(regularisation_selector=PearsonSelector(bounds=(-10, 1), iter_max=20)))
+mout2 = mfr2(
+    data=image.flatten(), 
     gmat=gmat2, 
-    errors=np.ones((1, image.size))*1e-5,
+    errors=np.ones((image.size))*1e-5,
     derivatives=derivs2,
-    bounds=(-15,0),
 )
 
 
@@ -182,33 +189,25 @@ rct = Rectangle((grid.rmin, grid.zmin), grid.rmax - grid.rmin, grid.zmax - grid.
 lnaax[0].add_patch(rct, )
 
 # The node projections with a wireframe of COMPASS vessel was calculated separately in CALCAM
-# It can not be easily reproduced here, so the image is loaded if available
-# Otherwise a simple node projection is drawn
-try:
-    lnaax[1].set_title('Node Projection')
-    node = imread('node_image_plane.png')
-    lnaax[1].imshow(node, origin='upper')
-    lnaax[1].set_axis_off()
-except FileNotFoundError:
-    from matplotlib.colors import LinearSegmentedColormap
-    cmap = LinearSegmentedColormap.from_list('foo', [(0, 'white'), (1, 'C1')])
-    tmp = np.zeros_like(phantom2)
-    tmp[18, 17] = 100
-    replacement = gmat2 @ tmp.flatten()
-    replacement = replacement.reshape(resolution) > 0
-    lnaax[1].imshow(replacement, cmap=cmap, origin='lower')
-    lnaax[1].text(3/40*resolution[0], 10/40*resolution[1], 'Central column', rotation='vertical')
-    lnaax[1].contour(image_column.reshape(resolution), levels=[0], colors='k', linewidths=0.5)
+# It can not be made public, therefore, a replacement with approximate central column projection is shown
+cmap = LinearSegmentedColormap.from_list('node', [(0, 'white'), (1, 'C1')])
+tmp = np.zeros_like(phantom2)
+tmp[18, 17] = 1  # selected node with unit emissivity
+replacement = gmat2 @ tmp.flatten()  # image of the node
+replacement = replacement.reshape(resolution) > 0  # 1 for pixels that observe the node
+lnaax[1].imshow(replacement, cmap=cmap, origin='lower')
+lnaax[1].text(3/40*resolution[0], 10/40*resolution[1], 'Central column', rotation='vertical')
+lnaax[1].contour(image_column.reshape(resolution), levels=[0.01], colors='k', linewidths=0.5)
 
-    lnaax[1].set_xticks([])
-    lnaax[1].set_yticks([])
+lnaax[1].set_xticks([])
+lnaax[1].set_yticks([])
 
 ncimg = lnaax[2].imshow(image.reshape(resolution), cmap='Blues', origin='lower')
 nccax = lnaax[2].inset_axes(bounds=[1.1, 0, 0.05, 1])
 lna.colorbar(ncimg, cax=nccax, label='Signal [-]')
 
 lnaax[2].text(3/40*resolution[0], 10/40*resolution[1], 'Central column', rotation='vertical')
-lnaax[2].contour(image_column.reshape(resolution), levels=[0], colors='k', linewidths=0.5)
+lnaax[2].contour(image_column.reshape(resolution), levels=[0.01], colors='k', linewidths=0.5)
 
 
 # ## Figure 3

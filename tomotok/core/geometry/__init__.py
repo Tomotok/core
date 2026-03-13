@@ -1,5 +1,4 @@
-# Copyright 2021 Institute of Plasma Physics of the Czech Academy of Sciences. 
-#
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences. 
 # Licensed under the EUPL-1.2 or later.
 """
 Contains functions and classes required for geometry matrix computation using single line of sight approximation.
@@ -9,6 +8,19 @@ Contains functions and classes required for geometry matrix computation using si
  - line of sight generators for artificial diagnostics
  - gmat handler prototype
 """
-from .generators import sparse_line
+from .generators import dense_line, sparse_line, calcam_sparse_line
 from .grids import Grid, RegularGrid
-from .io import save_sparse_gmat, load_sparse_gmat
+from .io import save_sparse_gmat, load_sparse_gmat, save_dense_gmat, load_dense_gmat
+
+
+__all__ = [
+    "dense_line",
+    "sparse_line",
+    "calcam_sparse_line",
+    "Grid",
+    "RegularGrid",
+    "save_sparse_gmat",
+    "load_sparse_gmat",
+    "save_dense_gmat",
+    "load_dense_gmat"
+]

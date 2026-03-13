@@ -6,3 +6,14 @@ from . import divertor
 from . import hdf
 from . import phantoms
 from . import sightlines
+
+
+__all__ = [
+    "Diagnostic",
+    "Tokamak",
+    "containers",
+    "divertor",
+    "hdf",
+    "phantoms",
+    "sightlines",
+]
