@@ -3,7 +3,7 @@ This tutorial demonstrates how to check values of the anisotropic derivative mat
 """
 import matplotlib.pyplot as plt
 
-from tomotok.core.derivative import anisotropic_derivative_matrix
+from tomotok.core.regularisations import anisotropic_derivative_matrix
 from tomotok.core.geometry import RegularGrid
 from tomotok.tools.phantoms import elliptical_flux
 from tomotok.tools.checkers import AnisotropicDerivativeChecker

@@ -2,9 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from tomotok.core.geometry import sparse_line, RegularGrid
-from tomotok.core.derivative import derivative_matrix
+from tomotok.core.regularisations import derivative_matrix, weighted_squares
 from tomotok.core.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
-from tomotok.core.regularisation import regularisation_matrix
 from tomotok.tools.phantoms import gaussian_on_flux, elliptical_flux
 from tomotok.tools.sightlines import generate_sightlines
 
@@ -43,7 +42,7 @@ derivatives = [
     derivative_matrix(grid, 'right', compensate_edges=False),
     derivative_matrix(grid, 'top', compensate_edges=False),
 ]
-regularisation = regularisation_matrix(derivatives)
+regularisation = weighted_squares(derivatives)
 
 
 # Inversions

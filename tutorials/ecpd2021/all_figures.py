@@ -17,11 +17,11 @@ from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
 from scipy import sparse
 
 from tomotok.core.geometry import RegularGrid, sparse_line
-from tomotok.core.derivative import derivative_matrix
+from tomotok.core.regularisations.derivatives import derivative_matrix
 from tomotok.core.inversions import Bob, Tikhonov, PearsonSelector
 from tomotok.core.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
 from tomotok.core.inversions.mfr import MinimumFisherRegularisation
-from tomotok.core.regularisation import regularisation_matrix
+from tomotok.core.regularisations.matrices import weighted_squares
 from tomotok.tools.phantoms import gauss_iso
 from tomotok.tools.sightlines import generate_sightlines
 
@@ -90,7 +90,7 @@ derivs = [
     derivative_matrix(grid, 'top', compensate_edges=False),
     derivative_matrix(grid, 'left', compensate_edges=False),
 ]
-regularisation = regularisation_matrix(derivs)
+regularisation = weighted_squares(derivs)
 
 svd = SvdAlgebraic(num=None, regularisation_selector=FastSelector(method='logmean'))
 ela = time.time()

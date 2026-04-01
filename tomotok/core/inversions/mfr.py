@@ -2,10 +2,9 @@
 # Licensed under the EUPL-1.2 or later.
 import warnings
 import numpy as np
-from numpy.typing import ArrayLike
 from scipy import sparse
 
-from tomotok.core.regularisation import regularisation_matrix
+from tomotok.core.regularisations import weighted_squares
 
 from .base import RegularisedSolver
 
@@ -41,7 +40,7 @@ class MinimumFisherRegularisation:
         gmat: np.ndarray | sparse.csc_array | sparse.csr_array, 
         derivatives: list[sparse.csc_array | sparse.csr_array],
         errors: float | np.ndarray,
-        derivative_weights: ArrayLike | list[float] | float | None = None,
+        derivative_weights: list[float] | float | None = None,
         mfi_num: int = 3,
         initial_guess: np.ndarray | None = None,
     ) -> tuple[np.ndarray, list[dict]]:
@@ -90,7 +89,7 @@ class MinimumFisherRegularisation:
         for solver in self.solver:
             node_weights = 1 / g
             node_weights[g <= 0] = np.nanmax(node_weights)
-            regularisation = regularisation_matrix(
+            regularisation = weighted_squares(
                 derivatives,
                 derivative_weights,
                 node_weights,

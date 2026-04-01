@@ -7,7 +7,7 @@ Handles computation of derivative matrices used for regularization in MFR algori
 import numpy as np
 from scipy import sparse
 
-from .geometry import RegularGrid
+from tomotok.core.geometry import RegularGrid
 
 
 def all_direction_derivative_matrices(
