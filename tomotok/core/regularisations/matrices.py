@@ -10,8 +10,8 @@ def weighted_squares(
 ) -> sparse.csc_matrix:
     """Computes regularisation matrix as a weighted sum of squares of the input matrices.
 
-    The weights can be based on intermediate results creating a non-linear regularisation matrix.
-    Proper 
+    The weights can be based on a previous results creating an iterative non-linear regularisation scheme.
+    For example, using inverse of the solution from the previous iteration is used in the MFR algorithm.
 
     Parameters
     ----------
