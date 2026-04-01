@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from scipy import sparse
 
-from tomotok.core.derivative import (
+from tomotok.core.regularisations.derivatives import (
     all_direction_derivative_matrices,
     compensate_matrix,
     laplace_matrix,

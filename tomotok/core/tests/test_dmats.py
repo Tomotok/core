@@ -1,7 +1,7 @@
 # Licensed under the EUPL-1.2 or later.
 import unittest
 
-from tomotok.core.derivative import derivative_matrix, anisotropic_derivative_matrix
+from tomotok.core.regularisations import derivative_matrix, anisotropic_derivative_matrix
 from tomotok.core.geometry import RegularGrid
 from tomotok.tools.phantoms import elliptical_flux
 

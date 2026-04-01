@@ -4,25 +4,25 @@ import unittest
 import numpy as np
 from scipy import sparse
 
-from tomotok.core.regularisation import regularisation_matrix
+from tomotok.core.regularisations import weighted_squares
 
 
 class RegularisationMatrixTestCase(unittest.TestCase):
     def test_single_derivative_defaults_to_identity_weighting(self):
-        dmat = sparse.eye_array(3, format='csc')
-        reg = regularisation_matrix(dmat)
+        mat = sparse.eye_array(3, format='csc')
+        reg = weighted_squares(mat)
 
         self.assertEqual(reg.shape, (3, 3))
         np.testing.assert_allclose(reg.toarray(), np.eye(3))
 
     def test_multiple_derivatives_with_weights(self):
-        dmat_1 = sparse.eye_array(3, format='csc')
-        dmat_2 = 2 * sparse.eye_array(3, format='csc')
+        mat_1 = sparse.eye_array(3, format='csc')
+        mat_2 = 2 * sparse.eye_array(3, format='csc')
         node_weights = np.array([1.0, 2.0, 3.0])
 
-        reg = regularisation_matrix(
-            [dmat_1, dmat_2],
-            derivative_weights=[1.0, 3.0],
+        reg = weighted_squares(
+            [mat_1, mat_2],
+            matrix_weights=[1.0, 3.0],
             node_weights=node_weights,
         )
 
@@ -35,9 +35,9 @@ class RegularisationMatrixTestCase(unittest.TestCase):
 
         self.assertRaises(
             ValueError,
-            regularisation_matrix,
+            weighted_squares,
             [dmat, dmat],
-            derivative_weights=[1.0],
+            matrix_weights=[1.0],
         )
 
     def test_non_iterable_derivative_weights_raises(self):
@@ -45,7 +45,7 @@ class RegularisationMatrixTestCase(unittest.TestCase):
 
         self.assertRaises(
             TypeError,
-            regularisation_matrix,
+            weighted_squares,
             [dmat, dmat],
-            derivative_weights=1,
+            matrix_weights=1,
         )

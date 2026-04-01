@@ -201,5 +201,5 @@ class PackageExportTestCase(unittest.TestCase):
         self.assertTrue(tomotok.core.__version__)
         self.assertEqual(
             tomotok.core.__all__,
-            ['derivative', 'geometry', 'inversions', 'regularisation'],
+            ['geometry', 'inversions', 'regularisations'],
         )
