@@ -22,7 +22,7 @@ from tomotok.core.inversions import Bob, Tikhonov, PearsonSelector
 from tomotok.core.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
 from tomotok.core.inversions.mfr import MinimumFisherRegularisation
 from tomotok.core.regularisations.matrices import weighted_squares
-from tomotok.tools.phantoms import gauss_iso
+from tomotok.tools.phantoms import regular_elliptical_flux, gaussian_on_flux
 from tomotok.tools.sightlines import generate_sightlines
 
 
@@ -73,7 +73,8 @@ endpnts = np.concatenate([e1, e2, e3, e4], 0)
 gmat = sparse_line(startpnts, endpnts, grid, rmin=.2)
 dgmat = gmat.toarray()
 
-phantom = gauss_iso(grid.nr, grid.nz, w=0.2) * 100
+flux = regular_elliptical_flux(grid, span=1.2)
+phantom = gaussian_on_flux(flux, width=0.2, amplitude=100)
 
 # create synthetic signal
 sig = gmat.dot(phantom.flatten())
@@ -135,7 +136,8 @@ grid_column = RegularGrid(1, 1, (0, 0.2, ), (-.4, .4))  # single node grid for t
 gmat_column = sparse_line(start, end, grid_column)
 image_column = gmat_column @ np.array([1])
 
-phantom2 = gauss_iso(grid2.nr, grid2.nz, cen=.5) * 100
+flux2 = regular_elliptical_flux(grid2, span=1.2)
+phantom2 = gaussian_on_flux(flux2, center=0.5, amplitude=100)
 image = gmat2.dot(phantom2.reshape(-1, 1))
 derivs2 = [
     derivative_matrix(grid2, 'right'),
