@@ -3,7 +3,8 @@ Version 2.0 (DD.MM.2024)
 
 Changes
 -------
- - Default MFR class uses cho_factor and cho_solve from scipy
+ - Completely changed package structure to be more descriptive and to limit depth of submodules
+ - reworked inversion class structure around solver and regularised-solver hierarchies with selector-based regularisation and engine-based linear algebra backends
  - reworked format of line of sights, updated gmat computation functions
  - line of sight saving to a single json file
  - new function for calculation of anisotropic derivative matrix
