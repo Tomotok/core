@@ -7,9 +7,9 @@ from pathlib import Path
 import numpy as np
 from scipy import sparse
 
-from tomotok.core.geometry import RegularGrid
-from tomotok.core.geometry.generators import calcam_sparse_line, calcam_sparse_line_3d, dense_line, sparse_line, sparse_line_3d
-from tomotok.core.geometry.io import load_dense_gmat, load_sparse_gmat, save_dense_gmat, save_sparse_gmat
+from tomotok.geometry import RegularGrid
+from tomotok.geometry.generators import calcam_sparse_line, calcam_sparse_line_3d, dense_line, sparse_line, sparse_line_3d
+from tomotok.geometry.io import load_dense_gmat, load_sparse_gmat, save_dense_gmat, save_sparse_gmat
 
 
 class RegularGridTestCase(unittest.TestCase):

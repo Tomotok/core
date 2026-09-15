@@ -1,5 +1,12 @@
 image: repo.tok.ipp.cas.cz:5050/tomography/core/tomotok-sphinx:latest
 
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
 stages:
   - test
   - deploy
@@ -7,7 +14,9 @@ stages:
 test_code:
   stage: test
   script:
-  - python3 -m unittest discover -s tomotok -p "test_*.py"
+  - python3 -m unittest discover -s tomotok/tests -t . -p "test_*.py"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 test_pages:
   stage: test

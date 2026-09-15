@@ -7,26 +7,27 @@ import warnings
 
 import numpy as np
 from scipy import sparse
-import scipy.linalg
 from scipy.optimize import minimize_scalar
 
+from .solvers import Solver, CholeskySolver
 
-class Solver:
-    """Base class for inversion problem solvers."""
-    def __init__(self, engine: Engine | None = None):
-        self.engine: Engine | None = engine
+
+class Inversion:
+    """Base class for inversion problems."""
+    def __init__(self, solver: Solver | None = None):
+        self.solver: Solver | None = solver
 
     @property
-    def engine(self) -> Engine | None:
-        """Algebraic backend performing the inversion."""
-        return self._engine
+    def solver(self) -> Solver | None:
+        """Algebraic backend solving the system of linear equations."""
+        return self._solver
 
-    @engine.setter
-    def engine(self, value: Engine | None):
-        if isinstance(value, Engine) or value is None:
-            self._engine = value
+    @solver.setter
+    def solver(self, value: Solver | None):
+        if isinstance(value, Solver) or value is None:
+            self._solver = value
         else:
-            raise ValueError("Engine must be an instance of the Engine class.")
+            raise ValueError("Solver must be an instance of the Solver class.")
 
     def __call__(
         self,
@@ -56,29 +57,36 @@ class Solver:
         raise NotImplementedError("This method should be defined by subclasses.")
 
 
-class RegularisedSolver(Solver):
-    """Base class for solvers that use regularisation."""
+class RegularisedInversion(Inversion):
+    """Base class for inversion methods that use regularisation."""
     def __init__(
         self, 
-        engine: Engine | None = None,
+        solver: Solver | None = None,
         regularisation_selector: RegularisationSelector | None = None,
     ):
         """
         Parameters
         ----------
-        engine : Engine or None, optional
-            The engine used for solving the inversion problem. If ``None`` (default), a new :class:`CholeskyEngine` instance is created and used for this solver instance.
+        solver : Solver or None, optional
+            The solver used for solving the inversion problem. If ``None`` (default), a new :class:`CholeskySolver` instance is created and used for this inversion instance.
         regularisation_selector : RegularisationSelector or None, optional
             Strategy object used to determine the regularisation parameter.
             If ``None`` (default), a new :class:`PearsonSelector` instance is created
-            and used for this solver instance.
+            and used for this inversion instance.
         """
-        engine = engine or CholeskyEngine()
-        super().__init__(engine=engine)
+        solver = solver or CholeskySolver()
+        super().__init__(solver=solver)
         self._data: np.ndarray | None = None
         self._gmat: sparse.spmatrix | sparse.sparray | None = None
         self._regularisation: sparse.spmatrix | sparse.sparray | np.ndarray | None = None
-        self.selector = PearsonSelector() if regularisation_selector is None else regularisation_selector
+        if regularisation_selector is None:
+            self.selector = PearsonSelector()
+        elif isinstance(regularisation_selector, RegularisationSelector):
+            self.selector = regularisation_selector
+        else:
+            raise TypeError(
+                "regularisation_selector must be a RegularisationSelector instance or None"
+            )
 
     def _cache_inputs(
         self,
@@ -93,9 +101,9 @@ class RegularisedSolver(Solver):
     def __call__(
         self,
         data: np.ndarray,
-        gmat: sparse.spmatrix | sparse.sparray | np.ndarray,
-        regularisation: sparse.spmatrix | sparse.sparray | np.ndarray,
-        errors: int | float | np.ndarray,
+        gmat: sparse.sparray | np.ndarray,
+        regularisation: sparse.sparray | np.ndarray,
+        errors: float | np.ndarray,
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """
         Executes the regularised inversion scheme.
@@ -110,8 +118,9 @@ class RegularisedSolver(Solver):
             The geometry matrix.
         regularisation : sparse.spmatrix or sparse.sparray or np.ndarray
             The regularisation matrix.
-        errors : int or float or np.ndarray
-            The error estimates for the data.
+        errors : float or np.ndarray
+            The error estimates for the data that are used for normalisation in chi-squared test.
+            If a single float is provided, it is assumed that the error is constant for all data points.
 
         Returns
         -------
@@ -179,7 +188,7 @@ class RegularisedSolver(Solver):
 
 class RegularisationSelector:
     """Base class for regularisation parameter selectors."""
-    def determine(self, solver: RegularisedSolver) -> tuple[float, dict[str, Any]]:
+    def determine(self, inversion: RegularisedInversion) -> tuple[float, dict[str, Any]]:
         raise NotImplementedError("This method should be defined by subclasses.")
 
 
@@ -194,18 +203,25 @@ class PearsonSelector(RegularisationSelector):
         self._bounds = bounds
         self._iter_max = iter_max
         self._tolerance = tolerance
-        self._chisq: float | None = None
+        self._chisq: float = np.nan
+        self._best_logalpha: float = np.nan
+        self._best_distance: float = float("inf")
 
-    def _pearson_test(self, solver: RegularisedSolver, g: np.ndarray) -> float:
-        r"""Computes retrofit and residuum :math:`\chi^2` using pearson test
+    def _pearson_test(self, inversion: RegularisedInversion, g: np.ndarray) -> float:
+        r"""
+        Computes retrofit and residuum :math:`\chi^2` using pearson test on normalised data and geometry matrix.
+
+        The test is defined as:
 
         .. math ::
             \chi^2 = \frac{1}{M} \sum_{i}^{M} \left(\tilde{\mathbf{f}} - \tilde{\mathbf{T}} \cdot \mathbf{g} \right)_i^2
 
+        Where the tilde denotes normalisation by measurement errors.
+
         Parameters
         ----------
-        solver : RegularisedSolver
-            The solver for which the test is performed. The test uses the data and geometry matrix stored in the solver instance.
+        inversion : RegularisedInversion
+            The inversion for which the test is performed. The test uses the data and geometry matrix stored in the inversion instance.
         g : numpy.ndarray
             vector of tested emissivity
 
@@ -213,14 +229,15 @@ class PearsonSelector(RegularisationSelector):
         -------
         float
         """
-        retrofit = solver._gmat @ g
-        misfit = retrofit - solver._data
+        retrofit = inversion._gmat @ g
+        misfit = retrofit - inversion._data
         misfit_sq = np.power(misfit, 2)
-        self._chisq = np.average(misfit_sq)
-        return self._chisq
+        chisq = np.average(misfit_sq)
+        return chisq
 
-    def _test_regularization(self, logalpha: float, solver: RegularisedSolver) -> float:
-        """Function passed to minimisation routine used for finding regularisation parameter value.
+    def _test_regularization(self, logalpha: float, inversion: RegularisedInversion) -> float:
+        """
+        Function passed to minimisation routine used for finding regularisation parameter value.
 
         Inverses signals using given regularisation parameter and computes chi2 test
 
@@ -237,19 +254,23 @@ class PearsonSelector(RegularisationSelector):
             1D Euclidean distance from ideal Pearson test result
         """
         alpha = 10**logalpha
-        g = solver.invert(alpha)
-        chi2 = self._pearson_test(solver, g)
-        return abs(chi2 - 1)
+        g = inversion.invert(alpha)
+        chi2 = self._pearson_test(inversion, g)
+        distance = abs(chi2 - 1)
+        if distance < self._best_distance:
+            self._chisq = chi2
+            self._best_distance = distance
+            self._best_logalpha = logalpha
+        return distance
 
-    def determine(self, solver: RegularisedSolver) -> tuple[float, dict[str, Any]]:
-        """Determines value of regularisation parameter using minimisation of Pearson test.
+    def determine(self, inversion: RegularisedInversion) -> tuple[float, dict[str, Any]]:
+        """
+        Determines value of regularisation parameter using minimisation of Pearson test.
         
         The minimisation is done using the `minimize_scalar` function from `scipy.optimize`.
 
         Parameters
         ----------
-        regularisation : sparse.spmatrix
-            The regularisation matrix.
         bounds : tuple
             The bounds for the regularisation parameter.
         iter_max : int
@@ -264,9 +285,12 @@ class PearsonSelector(RegularisationSelector):
         dict
             A dictionary containing statistics about the inversion process.
         """
+        self._chisq = np.nan
+        self._best_logalpha = np.nan
+        self._best_distance = float("inf")
         res = minimize_scalar(
             self._test_regularization,
-            args=(solver,),
+            args=(inversion,),
             method='bounded',
             bounds=self._bounds,
             options={'maxiter': self._iter_max, 'xatol': self._tolerance},
@@ -277,13 +301,14 @@ class PearsonSelector(RegularisationSelector):
                 RuntimeWarning,
                 stacklevel=3,
             )
-        chisq = self._pearson_test(solver, solver.invert(10**res.x))
-        stats = dict(
-            iter_num=res.nfev,
-            logalpha=res.x,
-            chisq=chisq
-        )
         alpha = 10**res.x
+        chisq = self._chisq if self._chisq is not None else np.nan
+        stats = {
+            "iter_num": res.nfev,
+            "logalpha": res.x,
+            "alpha": alpha,
+            "chisq": chisq
+        }
         return alpha, stats
 
 
@@ -298,7 +323,7 @@ class FixedSelector(RegularisationSelector):
         """
         self._value = value
 
-    def determine(self, solver: RegularisedSolver | None = None) -> tuple[float, dict[str, Any]]:
+    def determine(self, inversion: RegularisedInversion | None = None) -> tuple[float, dict[str, Any]]:
         """Determines value of regularisation parameter using the fixed value.
 
         Returns
@@ -310,47 +335,9 @@ class FixedSelector(RegularisationSelector):
         """
         alpha = self._value
         # TODO: decide on what statistics to return here. Chi2?
-        stats = dict(
-            iter_num=0,
-            logalpha=np.log10(alpha),
-        )
+        stats = {
+            "iter_num": 0,
+            "logalpha": np.log10(alpha),
+            "alpha": alpha,
+        }
         return alpha, stats
-
-class Engine:
-    """Base class for inversion engines."""
-    def solve(self, a: np.ndarray | sparse.sparray, b: np.ndarray | sparse.sparray) -> np.ndarray:
-        r"""
-        Solves the linear system :math:`\mathbf{Ax}=\mathbf{b}`.
-
-        Parameters
-        ----------
-        a : array_like or sparse array
-            System of equations matrix to be solved
-        b : array_like
-            right hand side vector or matrix (in case of multiple time slices)
-
-        Returns
-        -------
-        np.ndarray
-            The solution of the linear system.
-        """
-        raise NotImplementedError("This method should be defined by subclasses.")
-
-class CholeskyEngine(Engine):
-    """Scipy based engine using Cholesky decomposition to solve linear systems."""
-    def __init__(self, check_finite: bool = False):
-        super().__init__()
-        self._check_finite = check_finite
-
-    def solve(
-        self,
-        a: np.ndarray | sparse.sparray,
-        b: np.ndarray | sparse.sparray
-    ) -> np.ndarray | sparse.sparray:
-        """Sparse matrices are converted to dense arrays before decomposition."""
-        if sparse.issparse(a):
-            a = a.toarray()
-        if sparse.issparse(b):
-            b = b.toarray()
-        factor = scipy.linalg.cho_factor(a, check_finite=self._check_finite)
-        return scipy.linalg.cho_solve(factor, b)

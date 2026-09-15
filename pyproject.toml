@@ -22,8 +22,34 @@ dependencies = [
     "h5py>=2.7.1"
 ]
 
+[project.optional-dependencies]
+jax = [
+    "jax",
+]
+optax = [
+    "jax",
+    "optax",
+]
+sksparse = [
+    "scikit-sparse>=0.4.2",
+]
+cvxpy = [
+    "cvxpy",
+]
+all-solvers = [
+    "jax",
+    "optax",
+    "scikit-sparse>=0.4.2",
+    "cvxpy",
+]
+
 [project.urls]
 Homepage = "https://github.com/tomotok/core"
 
 [setuptools.dynamic]
-version = { file = "tomotok/core/VERSION" }
+version = { file = "tomotok/VERSION" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tomotok*"]
+exclude = ["build*", "docs*", "tutorials*", "tomotok.egg-info*"]

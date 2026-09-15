@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from scipy import sparse
 
-from tomotok.core.regularisations import weighted_squares
+from tomotok.regularisations import weighted_squares
 
 
 class RegularisationMatrixTestCase(unittest.TestCase):

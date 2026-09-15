@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.interpolate import RectBivariateSpline
 
-from tomotok.core.geometry import Grid, RegularGrid
+from tomotok.geometry import Grid, RegularGrid
 
 
 @dataclass
