@@ -1,0 +1,20 @@
+name: test_pages
+
+on:
+  pull_request:
+
+jobs:
+  test_pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install package and docs dependencies
+        run: pip install . sphinx numpydoc sphinx-book-theme
+
+      - name: Build docs
+        run: sphinx-build -b html docs/source public
