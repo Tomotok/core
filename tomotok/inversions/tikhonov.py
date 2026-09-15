@@ -2,10 +2,10 @@
 # Licensed under the EUPL-1.2 or later.
 import numpy as np
 
-from .base import RegularisedSolver
+from .base import RegularisedInversion
 
 
-class Tikhonov(RegularisedSolver):
+class Tikhonov(RegularisedInversion):
     """Implements inversion based on Phillips-Tikhonov regularisation scheme."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -31,5 +31,5 @@ class Tikhonov(RegularisedSolver):
             regularisation parameter
         """
         mod_mat = self._gdg + alpha * self._regularisation
-        g = self.engine.solve(mod_mat, self._gdsig)
+        g = self.solver.solve(mod_mat, self._gdsig)
         return g

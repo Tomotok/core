@@ -11,16 +11,18 @@ Contains functions and classes required for geometry matrix computation using si
 from .generators import dense_line, sparse_line, calcam_sparse_line
 from .grids import Grid, RegularGrid
 from .io import save_sparse_gmat, load_sparse_gmat, save_dense_gmat, load_dense_gmat
+from .sightlines import generate_sightlines
 
 
 __all__ = [
-    "dense_line",
-    "sparse_line",
-    "calcam_sparse_line",
     "Grid",
     "RegularGrid",
-    "save_sparse_gmat",
+    "calcam_sparse_line",
+    "dense_line",
+    "generate_sightlines",
+    "load_dense_gmat",
     "load_sparse_gmat",
     "save_dense_gmat",
-    "load_dense_gmat"
+    "save_sparse_gmat",
+    "sparse_line",
 ]

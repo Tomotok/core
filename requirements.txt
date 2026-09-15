@@ -7,4 +7,4 @@ scikit-sparse >= 0.4.2
 # building the docs
 sphinx
 numpydoc
-sphinx-rtd-theme
+sphinx-book-theme

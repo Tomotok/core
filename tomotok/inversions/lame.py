@@ -8,14 +8,14 @@ Structure of classes is based on algorithms proposed by T. Odstrcil however with
 import warnings
 
 import numpy as np
-import scipy.sparse as sparse
+from scipy import sparse
 from scipy.stats.mstats import mquantiles
 from scipy.sparse.linalg import eigsh
 
-from .base import RegularisedSolver, RegularisationSelector
+from .base import RegularisedInversion, RegularisationSelector
 
 
-class Algebraic(RegularisedSolver):
+class Algebraic(RegularisedInversion):
     """A base class for solvers based on algebraic inversion methods.
 
     Unlike RegularisedSolver, this class does not support inversion engines, but implements the inversions itself.
@@ -34,7 +34,7 @@ class Algebraic(RegularisedSolver):
     """
     def __init__(self, regularisation_selector=None, num: int | None = None):
         super().__init__(regularisation_selector=regularisation_selector)
-        self._engine = None
+        self._solver = None
         self.u: np.ndarray = None
         self.s: np.ndarray = None
         self.v: np.ndarray = None
@@ -197,6 +197,11 @@ class FastSelector(RegularisationSelector):
     """Fast regularisation parameter selector based on decomposition of a linear algebraic method.
 
     The regularisation parameter is estimated from the values of the diagonal matrix from the decomposition.
+    
+    Notes
+    -----
+    This selector is designed exclusively for ``Algebraic`` solver instances (``SvdAlgebraic``, ``GevAlgebraic``)
+    and will raise a ``TypeError`` if used with other solver types such as ``Tikhonov``.
     """
     VALID_METHODS: tuple[str, ...] = ('mean', 'half', 'median', 'quantile', 'logmean')
 
@@ -250,11 +255,11 @@ class FastSelector(RegularisationSelector):
             log_s = np.log10(solver.s)
             alpha = np.power(10, log_s.mean())
         else:
-            raise ValueError('Unrecognized option for regularisation parameter estimation: {}'.format(method))
+            raise ValueError(f'Unrecognized option for regularisation parameter estimation: {method}')
 
-        stats = dict(
-            method=method,
-            alpha=alpha,
-            logalpha=np.log10(alpha),
-        )
+        stats = {
+            "method": method,
+            "alpha": alpha,
+            "logalpha": np.log10(alpha),
+        }
         return alpha, stats

@@ -9,7 +9,7 @@ Currently supported formats:
  - scipy.sparse.dia_array
 """
 import h5py
-import scipy.sparse as sparse
+from scipy import sparse
 
 
 def sparse_to_hdf(matrix: sparse.csc_array | sparse.csr_array | sparse.dia_array, group: h5py.Group):
@@ -22,7 +22,6 @@ def sparse_to_hdf(matrix: sparse.csc_array | sparse.csr_array | sparse.dia_array
         cs_to_hdf(matrix, group)
     else:
         raise TypeError(f'Unsupported matrix type `{type(matrix)}`. Use dia, csc or csr.')
-    return
 
 
 def hdf_to_sparse(group: h5py.Group) -> sparse.spmatrix:
@@ -44,12 +43,11 @@ def dia_to_hdf(matrix: sparse.dia_array, group: h5py.Group):
     Saves dia matrix to hdf group.
     """
     if not isinstance(matrix, sparse.dia_array):
-        raise ValueError(f'Provided matrix is not of sparse diagonal type but `{type(matrix)}`.')
+        raise TypeError(f'Provided matrix is not of sparse diagonal type but `{type(matrix)}`.')
     group.attrs['type'] = matrix.format
     group.attrs['shape'] = matrix.shape
     group.create_dataset('offsets', data=matrix.offsets)
     group.create_dataset('data', data=matrix.data)
-    return
 
 
 def hdf_to_dia(group: h5py.Group) -> sparse.dia_array:
@@ -71,13 +69,12 @@ def cs_to_hdf(matrix: sparse.csc_array | sparse.csr_array, group: h5py.Group):
     Saves compressed sparse matrix to hdf group.
     """
     if not isinstance(matrix, (sparse.csc_array, sparse.csr_array)):
-        raise ValueError(f'Provided matrix is not of csc or csr type but {type(matrix)}.')
+        raise TypeError(f'Provided matrix is not of csc or csr type but {type(matrix)}.')
     group.attrs['type'] = matrix.format
     group.attrs['shape'] = matrix.shape
     group.create_dataset('indices', data=matrix.indices)
     group.create_dataset('indptr', data=matrix.indptr)
     group.create_dataset('data', data=matrix.data)
-    return
 
 
 def hdf_to_cs(group: h5py.Group) -> sparse.csc_array | sparse.csr_array:
@@ -86,7 +83,7 @@ def hdf_to_cs(group: h5py.Group) -> sparse.csc_array | sparse.csr_array:
     """
     form = group.attrs['type']
     if form not in ['csc', 'csr']:
-        raise ValueError(f'Provided group attr `type` does not specify csc or csr matrix but `{form}`.')
+        raise TypeError(f'Provided group attr `type` does not specify csc or csr matrix but `{form}`.')
     shape = group.attrs['shape'][()]
     data = group['data'][:]
     indices = group['indices'][:]

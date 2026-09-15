@@ -20,7 +20,7 @@ import re
 import numpydoc
 
 
-with open(os.path.join(os.path.dirname(__file__), '../../tomotok/core/VERSION')) as version_file:
+with open(os.path.join(os.path.dirname(__file__), '../../tomotok/VERSION')) as version_file:
     ver = version_file.read().strip()
 
 ver_short = re.split('[a,b,r,rc]+', ver)[0]

@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike, NDArray
 from scipy.ndimage import gaussian_filter
 from scipy.sparse import sparray
 
-from tomotok.core.geometry import RegularGrid
+from tomotok.geometry import RegularGrid
 
 
 def get_divertor_channels(
