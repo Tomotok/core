@@ -1,4 +1,4 @@
-Version 2.0 (DD.MM.2024)
+Version 2.0 (DD.MM.YYYY)
 ========================
 
 Changes
@@ -14,6 +14,7 @@ New Features
  - tutorial for checking anisotropic derivative matrix
  - tests for line of sight saving and loading
  - tests for derivative matrix computation
+ - add github workflow for testing code on multiple python versions
 
 Fixes
 -----
