@@ -16,11 +16,11 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse import linalg as sp_linalg
 
-from .base import Solver, Engine, CholeskyEngine
+from .base import Inversion, Solver, CholeskySolver
 from tomotok.tools.hdf import sparse_to_hdf, hdf_to_sparse
 
 
-class Bob(Solver):
+class Bob(Inversion):
     r"""
     BiOrthogonal Basis decomposition
 
@@ -30,15 +30,15 @@ class Bob(Solver):
         :math:`\mathbf{b}_i` basis vectors of reconstruction plane
     basis_inv : scipy.sparse.spmatrix
         inverse of basis matrix, used for transformation to node basis
-    dec_mat : scipy.sparse.csr_matrix
+    decomposed_matrix : scipy.sparse.csr_matrix
         :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
     norms : numpy.ndarray
         node norms used in thresholding
     """
     def __init__(
         self,
-        engine: Engine | None = None,
-        dec_mat: sparse.sparray | None = None,
+        engine: Solver | None = None,
+        decomposed_matrix: sparse.sparray | None = None,
         basis: sparse.sparray | None = None,
     ):
         """
@@ -46,15 +46,15 @@ class Bob(Solver):
         ----------
         engine : Engine, optional
             engine for solving linear systems in decomposition, by default CholeskyEngine
-        dec_mat : scipy.sparse.sparray, optional
+        decomposed_matrix : scipy.sparse.sparray, optional
             previously decomposed matrix, avoids recomputation of decomposition when provided
         basis : scipy.sparse.sparray, optional
             A set of basis vectors used for decomposition
         """
-        engine = engine or CholeskyEngine()
-        super().__init__(engine=engine)
+        engine = engine or CholeskySolver()
+        super().__init__(solver=engine)
         self._basis = basis
-        self._adjoint_basis = dec_mat
+        self._adjoint_basis = decomposed_matrix
         self._norms: np.ndarray | None = None
 
     # @property
@@ -113,7 +113,7 @@ class Bob(Solver):
     def compute_coordinates(self, a: sparse.csc_array) -> sparse.csr_array:
         """Computes coordinate matrix for transformation to reconstruction plane."""
         b = np.eye(a.shape[0])
-        c = self.engine.solve(a, b)
+        c = self.solver.solve(a, b)
         return sparse.csr_array(c)
 
     def __call__(
@@ -174,10 +174,10 @@ class Bob(Solver):
             raise ValueError('Can not save decomposition before it is calculated.')
         floc = str(floc)
         with h5py.File(floc, 'w') as f:
-            f.attrs['version'] = '0.1'
+            f.attrs['version'] = '0.2'
             f.attrs['description'] = description
-            dec_mat = f.create_group('decomposed_matrix')
-            sparse_to_hdf(self._adjoint_basis, dec_mat)
+            decomposed_matrix = f.create_group('decomposed_matrix')
+            sparse_to_hdf(self._adjoint_basis, decomposed_matrix)
             basis = f.create_group('basis')
             sparse_to_hdf(self._basis, basis)
             if self._norms is not None:
@@ -226,7 +226,7 @@ class Bob(Solver):
         Parameters
         ----------
         image : numpy.ndarray
-            flattened image with shape (#pixels,)
+            flattened image, shape (#pixels,)
         c : int
             thresholding sensitivity constant
         precision : float, optional
@@ -237,7 +237,7 @@ class Bob(Solver):
         Returns
         -------
         numpy.ndarray
-            thresholded inversion result with shape (#pixels,)
+            inversion result with threshold applied, shape (#pixels,)
 
         Raises
         ------
@@ -294,7 +294,7 @@ class Bob(Solver):
         return res
 
 
-class SparseInvEngine(Engine):
+class SparseInvSolver(Solver):
     """Engine for solving linear systems in BOB decomposition using sparse inverse from scipy."""
     def solve(self, a: np.ndarray | sparse.sparray, b: np.ndarray | sparse.sparray) -> sparse.sparray:
         if isinstance(a, np.ndarray):
@@ -302,7 +302,7 @@ class SparseInvEngine(Engine):
         if sparse.issparse(b):
             b = b.toarray()
         if not np.allclose(b, np.eye(a.shape[0])):  # check whether RHS is identity matrix
-            raise ValueError('SparseInvEngine is designed to solve for identity matrix as RHS `b`')
+            raise ValueError('SparseInvSolver is designed to solve for identity matrix as RHS `b`')
         try:
             c = sp_linalg.inv(a)
         except RuntimeError:

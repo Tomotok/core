@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tomotok.core.geometry import sparse_line, RegularGrid
-from tomotok.core.regularisations import derivative_matrix, weighted_squares
-from tomotok.core.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
+from tomotok.geometry import sparse_line, RegularGrid, generate_sightlines
+from tomotok.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
+from tomotok.regularisations import derivative_matrix, weighted_squares
 from tomotok.tools.phantoms import gaussian_on_flux, elliptical_flux
-from tomotok.tools.sightlines import generate_sightlines
 
 
 # Setup

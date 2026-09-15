@@ -4,14 +4,14 @@ import unittest
 import numpy as np
 from scipy import sparse
 
-from tomotok.core.regularisations.derivatives import (
+from tomotok.regularisations.derivatives import (
     all_direction_derivative_matrices,
     compensate_matrix,
     laplace_matrix,
     reduce_matrix,
     standard_anisotropic_derivative_matrices,
 )
-from tomotok.core.geometry import RegularGrid
+from tomotok.geometry import RegularGrid
 
 
 class DerivativeHelpersTestCase(unittest.TestCase):

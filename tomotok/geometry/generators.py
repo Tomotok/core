@@ -51,7 +51,12 @@ def sparse_line_3d(
     --------
     sparse_line
     """
-    warn('Deprecated by `sparse_line`', DeprecationWarning)
+    warn(
+        'Function `sparse_line_3d` is deprecated and will be removed in a future version. ' +
+        'Use `sparse_line` instead.',
+        DeprecationWarning,
+        stacklevel=2
+    )
     if ychord is None:
         ychord = np.zeros_like(rchord)
     rchord = np.array(rchord, ndmin=2)
@@ -125,7 +130,12 @@ def calcam_sparse_line_3d(
     --------
     calcam_sparse_line
     """
-    warn('Deprecated by `calcam_sparse_line`', DeprecationWarning)
+    warn(
+        'Function `calcam_sparse_line_3d` is deprecated and will be removed in a future version. ' +
+        'Use `calcam_sparse_line` instead.',
+        DeprecationWarning,
+        stacklevel=2
+    )
     if steps is not None:
         warn('"steps" parameter was deprecated by "step"', DeprecationWarning)
         step = steps
@@ -152,6 +162,13 @@ def sparse_line(
     """Computes geometry matrix using simple numerical integration algorithm.
 
     Uses lines of sight start and end points in 3D Cartesian coordinates as input.
+    The line between start and end points is divided into small segments of length `step`,
+    and the contribution of each segment to the reconstruction grid is computed using a 2D histogram.
+
+    A central column blocking the lines of sights can be included using the `rmin` parameter.
+    The generated points are checked for intersection with a cylinder of radius `rmin` around the z-axis, 
+    and if any point is found inside the cylinder, only the points on the line of sight between 
+    the start point and the intersection point are used for the histogram.
 
     Parameters
     ----------
@@ -251,6 +268,10 @@ def dense_line(
     -------
     ndarray
         geometry matrix with shape (#lines, #nodes)
+
+    See Also
+    --------
+    sparse_line
     """
     if starts.ndim > 2:
         try:

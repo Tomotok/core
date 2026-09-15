@@ -15,22 +15,22 @@ Currently, the following inversions are implemented:
 
 Solvers can be used directly or in an iterative process with updated regularisation. This is the basis of the Minimum Fisher Regularisation (MFR) method, which is currently the only implemented iterative regularisation method.
 """
-from .base import PearsonSelector, FixedSelector, CholeskyEngine
-from .bob import Bob, SparseInvEngine
+from .base import PearsonSelector, FixedSelector, CholeskySolver
+from .bob import Bob, SparseInvSolver
 from .lame import GevAlgebraic, SvdAlgebraic, FastSelector
 from .mfr import MinimumFisherRegularisation
 from .tikhonov import Tikhonov
 
 
 __all__ = [
-	"PearsonSelector",
-	"FixedSelector",
-	"CholeskyEngine",
 	"Bob",
-	"SparseInvEngine",
-	"GevAlgebraic",
-	"SvdAlgebraic",
+	"CholeskySolver",
 	"FastSelector",
+	"FixedSelector",
+	"GevAlgebraic",
 	"MinimumFisherRegularisation",
+	"PearsonSelector",
+	"SparseInvSolver",
+	"SvdAlgebraic",
 	"Tikhonov",
 ]

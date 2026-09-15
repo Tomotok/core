@@ -13,7 +13,7 @@ from warnings import warn
 
 import numpy as np
 
-from tomotok.core.geometry import RegularGrid
+from tomotok.geometry import RegularGrid
 
 
 def regular_elliptical_flux(

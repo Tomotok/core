@@ -22,10 +22,10 @@ import numpy as np
 from matplotlib.colors import TwoSlopeNorm
 from scipy import sparse
 
-from tomotok.core.geometry import RegularGrid
+from tomotok.geometry import RegularGrid
 
 
-class AnisotropicDerivativeChecker(object):
+class AnisotropicDerivativeChecker:
     """
     Computes anisotropic matrix for a time slice from provided magnetic flux and plots its components.
     Supports interactive selection of matrix element using mouse.
@@ -110,7 +110,6 @@ class AnisotropicDerivativeChecker(object):
         self.fig.canvas.draw()
         self.point = self.ax.plot(*grid.centre, 'r+')[0]
         self.update(*grid.centre)
-        return
 
     def update(self, x, y):
         """
@@ -151,4 +150,3 @@ class AnisotropicDerivativeChecker(object):
             pass
         else:
             self.update(x, y)
-        return

@@ -16,14 +16,12 @@ from matplotlib.patches import Rectangle
 from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
 from scipy import sparse
 
-from tomotok.core.geometry import RegularGrid, sparse_line
-from tomotok.core.regularisations.derivatives import derivative_matrix
-from tomotok.core.inversions import Bob, Tikhonov, PearsonSelector
-from tomotok.core.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
-from tomotok.core.inversions.mfr import MinimumFisherRegularisation
-from tomotok.core.regularisations.matrices import weighted_squares
+from tomotok.geometry import RegularGrid, sparse_line, generate_sightlines
+from tomotok.inversions import Bob, Tikhonov, PearsonSelector
+from tomotok.inversions.lame import GevAlgebraic, SvdAlgebraic, FastSelector
+from tomotok.inversions.mfr import MinimumFisherRegularisation
+from tomotok.regularisations import derivative_matrix, weighted_squares
 from tomotok.tools.phantoms import regular_elliptical_flux, gaussian_on_flux
-from tomotok.tools.sightlines import generate_sightlines
 
 
 rcParams['text.usetex'] = True

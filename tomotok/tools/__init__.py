@@ -5,7 +5,6 @@ from . import containers
 from . import divertor
 from . import hdf
 from . import phantoms
-from . import sightlines
 
 
 __all__ = [
@@ -15,5 +14,4 @@ __all__ = [
     "divertor",
     "hdf",
     "phantoms",
-    "sightlines",
 ]
