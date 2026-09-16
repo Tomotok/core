@@ -1,9 +1,12 @@
-.*/
-__pycache__/
-docs/build
-
 # package build
 build/
 dist/
 target/
 *.egg-info/
+
+# docs build
+docs/build
+
+# caches
+__pycache__/
+./.pytest_cache/

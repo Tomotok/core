@@ -1,0 +1,27 @@
+name: test_code
+
+on:
+  pull_request:
+  push:
+    branches:
+      - development
+
+jobs:
+  test_code:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package
+        run: pip install .
+
+      - name: Run tests
+        run: python3 -m unittest discover -s tomotok/tests -t . -p "test_*.py"
