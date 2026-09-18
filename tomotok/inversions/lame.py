@@ -33,6 +33,14 @@ class Algebraic(RegularisedInversion):
         decomposition matrix with shape (#nodes, #channels)    
     """
     def __init__(self, regularisation_selector=None, num: int | None = None):
+        """
+        Parameters
+        ----------
+        regularisation_selector : RegularisationSelector, optional
+            selector for regularisation parameter, by default None, which means that the regularisation parameter should be provided directly to the `invert` method
+        num : int, optional
+            number of columns used for series expansion, by default None, which means that the number specified in the class initialization is used
+        """
         super().__init__(regularisation_selector=regularisation_selector)
         self._solver = None
         self.u: np.ndarray = None
