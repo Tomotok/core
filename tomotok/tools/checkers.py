@@ -8,8 +8,8 @@ Examples
 --------
 Checking anisotropic derivative matrix
 
->>> from tomotok.core import RegularGrid
->>> from tomotok.core.derivatives import anisotropic_derivative_matrix
+>>> from tomotok.geometry import RegularGrid
+>>> from tomotok.regularisations import anisotropic_derivative_matrix
 >>> 
 >>> grid = RegularGrid(50, 100, (0.5, 1), (-0.5, 0.5))
 >>> checker = AnisotropicDerivativeChecker(grid)
@@ -119,7 +119,7 @@ class AnisotropicDerivativeChecker:
         z_idx = np.abs(self.grid.z_center - y).argmin()
         r = self.grid.r_center[r_idx]
         z = self.grid.z_center[z_idx]
-        self.point.set_data(r, z)
+        self.point.set_data([r], [z])
 
         self.ax2[0].set_title(f'dmat1, $r_0$={r:.3f}, $z_0$={z:.3f}')
         self.ax2[1].set_title(f'dmat2, $r_0$={r:.3f}, $z_0$={z:.3f}')

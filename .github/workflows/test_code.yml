@@ -24,4 +24,4 @@ jobs:
         run: pip install .
 
       - name: Run tests
-        run: python3 -m unittest discover -s tomotok/tests -t . -p "test_*.py"
+        run: python3 -m unittest discover -s tests -t . -p "test_*.py"

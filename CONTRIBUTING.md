@@ -15,7 +15,13 @@ Use Python 3.10 or newer.
 Run the full test suite before opening a merge request.
 
 ```bash
-python -m unittest discover -s tomotok -p "test_*.py"
+./dev/run_tests.sh
+```
+
+Equivalent to:
+
+```bash
+python -m unittest discover -s tests -t . -p "test_*.py"
 ```
 
 Recommended for bug fixes and features:
