@@ -17,7 +17,7 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=2.0.0",
-    "scipy>=1.13.0",
+    "scipy>=1.14.0",
     "matplotlib>=3.2.0",
     "h5py>=2.7.1"
 ]
@@ -31,7 +31,7 @@ optax = [
     "optax",
 ]
 sksparse = [
-    "scikit-sparse>=0.4.2",
+    "scikit-sparse>=0.5.0",
 ]
 cvxpy = [
     "cvxpy",
@@ -39,7 +39,7 @@ cvxpy = [
 all-solvers = [
     "jax",
     "optax",
-    "scikit-sparse>=0.4.2",
+    "scikit-sparse>=0.5.0",
     "cvxpy",
 ]
 docs = [

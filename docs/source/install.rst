@@ -39,8 +39,7 @@ To contribute to Tomotok or work with an editable checkout, clone the `github re
 <https://github.com/Tomotok/core>`_ and run the following commands from the repository root::
 
     python -m pip install --upgrade pip
-    python -m pip install -e .
-    python -m pip install -r requirements.txt
+    python -m pip install -e ".[docs]"
 
 Optional solver backends can be combined with the editable install, e.g. ``pip install -e ".[jax]"``.
 

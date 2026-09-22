@@ -4,8 +4,7 @@ Run commands from the core repository root (`core/`).
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -e .
-python -m pip install -r requirements.txt
+python -m pip install -e ".[docs]"
 ```
 
 Use Python 3.10 or newer.
