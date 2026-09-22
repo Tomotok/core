@@ -5,23 +5,3 @@ tomotok.core package
    :members:
    :show-inheritance:
    :undoc-members:
-
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   tomotok.core.geometry
-   tomotok.core.inversions
-
-Submodules
-----------
-
-tomotok.core.derivative module
-------------------------------
-
-.. automodule:: tomotok.core.derivative
-   :members:
-   :show-inheritance:
-   :undoc-members:

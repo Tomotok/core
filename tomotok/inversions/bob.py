@@ -44,8 +44,8 @@ class Bob(Inversion):
         """
         Parameters
         ----------
-        engine : Engine, optional
-            engine for solving linear systems in decomposition, by default CholeskyEngine
+        engine : Solver, optional
+            solver for solving linear systems in decomposition, by default CholeskySolver
         decomposed_matrix : scipy.sparse.sparray, optional
             previously decomposed matrix, avoids recomputation of decomposition when provided
         basis : scipy.sparse.sparray, optional
@@ -295,7 +295,7 @@ class Bob(Inversion):
 
 
 class SparseInvSolver(Solver):
-    """Engine for solving linear systems in BOB decomposition using sparse inverse from scipy."""
+    """Solver for solving linear systems in BOB decomposition using sparse inverse from scipy."""
     def solve(self, a: np.ndarray | sparse.sparray, b: np.ndarray | sparse.sparray) -> sparse.sparray:
         if isinstance(a, np.ndarray):
             a = sparse.csc_array(a)

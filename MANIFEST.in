@@ -1,3 +1,3 @@
 include MANIFEST.in README.md LICENCE.txt CITE.txt AUTHORS.txt CONTRIBUTING.md requirements.txt .gitignore 
-include tomotok/core/VERSION
-recursive-exclude *.py[cod]
+include tomotok/VERSION
+global-exclude *.py[cod]

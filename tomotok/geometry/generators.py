@@ -62,7 +62,6 @@ def sparse_line_3d(
     rchord = np.array(rchord, ndmin=2)
     vchord = np.array(vchord, ndmin=2)
     ychord = np.array(ychord, ndmin=2)
-    ela = time.time()
     nch = rchord.shape[0]
     gmat = sparse.lil_matrix((nch, grid.size))
     dr = np.diff(rchord, axis=1)
@@ -85,9 +84,6 @@ def sparse_line_3d(
         row = hist[0].T * dst[i, 0] / steps
         srow = sparse.coo_matrix(row.flatten())
         gmat[i] = srow
-    ela = time.time() - ela
-    print('Gmat generation time {:.2f}s'.format(ela),
-          'average time per chord {:.0f}ms'.format(ela / nch * 1000))
     return gmat.tocsr()
 
 
@@ -113,7 +109,7 @@ def calcam_sparse_line_3d(
         (x, y, z) coordinates of pupil position
     dirs : np.ndarray
         (#rows, #columns, 3) line of sight direction vector coordinates
-    grid : tomotok.core.geometry.RegularGrid
+    grid : tomotok.geometry.RegularGrid
         reconstruction grid
     step : float, optional
         Integration step in meters.
@@ -229,7 +225,7 @@ def calcam_sparse_line(
         (x, y, z) coordinates of pupil position
     endpoints : np.ndarray
         (#rows, #columns, 3) line of sight end point coordinates
-    grid : tomotok.core.geometry.RegularGrid
+    grid : tomotok.geometry.RegularGrid
         reconstruction grid
     **kw : dict
         additional parameters passed to sparse_line

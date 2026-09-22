@@ -1,9 +1,9 @@
 # Tomotok
 Tomotok is a framework for the tomographic inversion of fusion plasmas, focusing on inversion methods based on discretisation. It is structured as a namespace package to ease implementation on different experimental devices and various diagnostics.
 
-The documentation can be found on github pages using this [link](https://tomotok.github.io/documentation/).
+Documentation built from the `development` branch of this repository, tracking the latest changes, is available at https://tomotok.github.io/core/.
 
-The core package of Tomotok namespace implements various discretization algorithms that are used for tomographic reconstruction of tokamak plasmas. It is a dependency for specific packages that automate database access for a given fusion experimental device.
+The core package of the Tomotok namespace implements various discretisation algorithms that are used for tomographic reconstruction of tokamak plasmas. It is a dependency for specific packages that automate database access for a given fusion experimental device.
 
 ## Installation
 The package can be installed using pip:
@@ -14,7 +14,7 @@ The PyPI packages might not contain the most recent features.
 It is recommended to install the package from source, if you want to use the latest features and do not mind the possibility of backward compatibility issues.
 
 ### Source code
-The source code can be found in repository on [github](https://github.com/Tomotok/core).
+The source code can be found in the repository on [GitHub](https://github.com/Tomotok/core).
 The `stable` branch ensures backward compatibility within the latest major version.
 Newest features with not fully guaranteed backward compatibility are implemented in the `development` branch. Tags follow the versions published on [PyPI](https://pypi.org/project/tomotok/).
 

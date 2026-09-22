@@ -27,8 +27,11 @@ Welcome to the Tomotok project for tomography of tokamak plasma.
    :maxdepth: 1
    :caption: Api Doc
 
-   api/tomotok.core
+   api/tomotok.geometry
+   api/tomotok.inversions
+   api/tomotok.regularisations
    api/tomotok.tools
+   api/tomotok.core
 
 Indices and tables
 ------------------

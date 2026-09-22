@@ -18,7 +18,7 @@ from .base import RegularisedInversion, RegularisationSelector
 class Algebraic(RegularisedInversion):
     """A base class for solvers based on algebraic inversion methods.
 
-    Unlike RegularisedSolver, this class does not support inversion engines, but implements the inversions itself.
+    Unlike RegularisedInversion, this class does not support inversion solvers, but implements the inversions itself.
     The inversion is performed using series expansion formula utilizing matrix decomposition.
     
     The decomposition is performed in the `decompose` method, which should be implemented in derived classes.

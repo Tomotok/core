@@ -18,7 +18,7 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.13.0",
-    "matplotlib>=2.2.2",
+    "matplotlib>=3.2.0",
     "h5py>=2.7.1"
 ]
 
@@ -41,6 +41,11 @@ all-solvers = [
     "optax",
     "scikit-sparse>=0.4.2",
     "cvxpy",
+]
+docs = [
+    "sphinx",
+    "numpydoc",
+    "sphinx-book-theme",
 ]
 
 [project.urls]

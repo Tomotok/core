@@ -56,11 +56,3 @@ tomotok.tools.phantoms module
    :members:
    :show-inheritance:
    :undoc-members:
-
-tomotok.tools.sightlines module
--------------------------------
-
-.. automodule:: tomotok.tools.sightlines
-   :members:
-   :show-inheritance:
-   :undoc-members:

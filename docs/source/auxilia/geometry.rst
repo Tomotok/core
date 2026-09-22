@@ -5,7 +5,7 @@ Handles geometry of the inversion task. This includes definition of reconstructi
 Geometry matrix
 ---------------
 
-.. automodule:: tomotok.core.geometry.generators
+.. automodule:: tomotok.geometry.generators
     :members:
     :undoc-members:
     :noindex:
@@ -13,6 +13,14 @@ Geometry matrix
 Reconstruction grids
 --------------------
 
-.. autoclass:: tomotok.core.geometry.RegularGrid
+.. autoclass:: tomotok.geometry.RegularGrid
     :members:
+    :noindex:
+
+Sightlines
+----------
+
+.. automodule:: tomotok.geometry.sightlines
+    :members:
+    :undoc-members:
     :noindex:

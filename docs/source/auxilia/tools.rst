@@ -3,15 +3,6 @@ Tools
 
 Utilities complementing the core functionalities.
 
-Sightlines
-----------
-
-.. automodule:: tomotok.tools.sightlines
-    :members:
-    :undoc-members:
-    :noindex:
-
-
 Phantom Emissivity
 ------------------
 

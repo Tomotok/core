@@ -9,7 +9,7 @@ Implementation
 
 Can compute derivative matrices, both isotropic and anisotropic based on magnetic flux values.
 
-.. automodule:: tomotok.core.derivative
+.. automodule:: tomotok.regularisations.derivatives
     :members:
     :show-inheritance:
     :noindex:
