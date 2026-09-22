@@ -103,6 +103,9 @@ autodoc_default_options = {
     'special-members' : '__call__',
     }
 autodoc_member_order = 'bysource'
+# Optional solver backends (see pyproject.toml extras); mocked so their modules
+# can be documented even when these packages aren't installed in the doc build env.
+autodoc_mock_imports = ['jax', 'optax', 'sksparse', 'cvxpy']
 
 # numpydoc
 numpydoc_show_inherited_class_members = False
