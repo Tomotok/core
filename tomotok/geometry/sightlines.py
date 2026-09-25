@@ -30,8 +30,8 @@ def generate_sightlines(
         vertical and horizontal field of view in degrees
     axis : tuple of three floats, optional
         direction of symmetry axis from pinhole to the center of the field of view
-    elong : float, optional
-        elongation of the sightlines, a multiplier for the length of the direction vectors
+    length : float, optional
+        length of the sightlines' direction vectors
 
     Returns
     -------
