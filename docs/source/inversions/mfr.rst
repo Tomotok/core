@@ -1,35 +1,53 @@
-Minimum Fisher Regularization
+Minimum Fisher Regularisation
 =============================
 
-Minimum Fisher information Regularisation algorithm based on [M1]_ and further improvements described in [M2]_ and building on other work such as [M3]_.
+The Minimum Fisher information Regularisation (MFR) algorithm is based on [M1]_, with further improvements described in [M2]_, and builds on other work such as [M3]_. It is well established and widely used for tokamak plasma tomography.
 
-This algorithm relies on Tikhonov regularisation to compensate under-determined nature of the tomography problem and consist of two loops. The inner loop searches for the optimal value of regularisation parameter based on the intermediate result and signal. The outer loop regularises the problem using the optimal values of regularisation parameter found by the inner loop that determines the strength of a-priori information imposed by smoothing matrix. It is based on the intermediate result and therefore the method is nonlinear. 
-	
-The inner loop searches for the regularisation parameter :math:`\alpha` iteratively. It is tested against the quality of reconstruction, that is determined by Pearson :math:`\chi^2` test with each iteration. The residuum :math:`\chi^2` is determined by the following equation:
+The algorithm combines the :ref:`Phillips-Tikhonov regularisation <tikhonov>` scheme with minimisation of Fisher information to compensate for the ill-posed nature of the tomography problem. Smoothness is usually the desired property of the reconstruction, and it was shown that the solution with minimal Fisher information is the smoothest one [M1]_. This makes Fisher information a suitable quantity for constructing the regularisation matrix.
 
-.. math::
-   \chi^2 = \frac{1}{N_\mathrm{c}} \sum_{i}^{N_\mathrm{c}} \left( \frac{ \left( \mathbf{f} - \mathbf{T} \cdot \mathbf{g} \right)_i }{\mathbf{\sigma}_i} \right)^2 \,,
-
-where :math:`N_\mathrm{c}` is the number of channels and :math:`\mathbf{\sigma}_i` is estimated noise measured by i-th channel. The optimal value is considered to be one. In such case the error of reconstruction is approximately the same as estimated error of measured data.
-	
-The outer loop uses following equation for inversion. It can be obtained by applying Tikhonov regularisation to tomography problem :ref:`base equation <tomobase>` [L2]_:
+The inversion solves equation :eq:`tikhonov` with the regularisation matrix constructed in the form of Fisher information
 
 .. math::
-   ( \mathbf{T}^T \cdot \mathbf{T} + \alpha \mathbf{H} ) \cdot \mathbf{g} = \mathbf{T}^T \cdot \mathbf{f} \,,
-   :label: tichonov
+   :label: mfr_regularisation
 
-where :math:`\alpha` is a regularisation parameter and :math:`\mathbf{H}` is regularisation matrix computed as:
+   \mathbf{H} = \sum_i c_i \mathbf{B}^{T}_{i} \cdot \mathbf{w} \cdot \mathbf{B}_{i} \,,
 
-.. math::
-   \mathbf{H} = c_1 \mathbf{D}^{T}_{1} \cdot \mathbf{w} \cdot \mathbf{D}_{1} + c_2 \mathbf{D}^{T}_{2} \cdot \mathbf{w} \cdot \mathbf{D}_{2} \,,
+where :math:`\mathbf{B}_i` are numerical derivative matrices, :math:`\mathbf{w}` is a diagonal matrix with weights for individual nodes and :math:`c_i` are anisotropy coefficients normalised so that :math:`\sum_i c_i = 1`. These components are described below.
 
-where :math:`\mathbf{D_1}`, :math:`\mathbf{D_2}` are matrices of numerical derivatives along locally orthogonal directions, :math:`c_1`, :math:`c_2`
-anisotropy coefficients and :math:`\mathbf{w}` is a matrix with weights for individual nodes. Elements of the weight matrix are computed as :math:`1/\mathbf{g}_0` for non zero elements of :math:`\mathbf{g}_0`, otherwise, a predefined value :math:`w_{\mathrm{max}}` is used. The sum of anisotropy coefficients should be equal to 1. The value of the regularisation parameter is tested using Pearson :math:`\chi^2` test. The optimal value of the regularisation parameter is then used to update the regularisation matrix and the inner loops repeats until the maximum number of outer cycles is reached.
+Derivative matrices
+   The derivative matrices can employ different finite difference schemes and directions. The choice of scheme and direction has an impact on the result [M3]_. To overcome this, a combination of schemes or directions can be used. A typical choice is to combine the forward scheme in all four basic directions, or additionally in diagonal directions, totalling eight derivative matrices. If the direction is the same for the entire reconstruction grid, the derivative matrix is called isotropic. It is also possible to use different directions for different parts of the grid, creating an anisotropic derivative matrix. An example is a matrix introducing smoothness along magnetic flux surfaces. See :mod:`tomotok.regularisations` for available derivative matrices.
+
+Node weights
+   The weights adjust how smooth the solution should be at different nodes: the larger the weight, the smoother the solution. In order for the regularisation matrix to have the form of Fisher information, the weights should be equal to :math:`1/\mathbf{g}`. Since :math:`\mathbf{g}` is the unknown determined by the inversion, the algorithm is nonlinear and is solved iteratively. For the first iteration, an initial estimate of the result can be provided, otherwise the same weight is used for all nodes, which corresponds to linear regularisation. In the following iterations the weights are determined from the previous solution :math:`\mathbf{g}^\mathrm{prev}` as
+
+   .. math::
+
+      w_{ii} = \begin{cases}
+         1 / g_i^\mathrm{prev} & \text{if } g_i^\mathrm{prev} > 0 \,, \\
+         w_\mathrm{max} & \text{if } g_i^\mathrm{prev} \leq 0 \,,
+      \end{cases}
+
+   where :math:`w_\mathrm{max}` is a predefined large number.
+
+Anisotropy coefficients
+   The coefficients :math:`c_i` control the relative weights of the derivative matrices. Since they are normalised automatically, only their ratios matter. If a coefficient is increased relative to the others, the result is required to be smoother in the direction represented by the respective derivative matrix. In combination with a magnetic equilibrium reconstruction and anisotropic derivative matrices, they can be used to prefer solutions that are smoother along magnetic flux surfaces and steeper perpendicular to them. This is usually referred to as anisotropic regularisation. It is the most common choice for tokamak plasma, motivated by theory, even though it is only one of many possible combinations.
+
+Having constructed the regularisation matrix, the last unknown in :eq:`tikhonov` is the regularisation parameter :math:`\alpha`, which is typically found using the :ref:`Pearson test <pearson>`. The solution obtained with this parameter is then used to update the node weights and the regularisation matrix, and the process is repeated until the selected number of iterations is reached. The construction and updating of the regularisation matrix is called the outer loop, while the search for the regularisation parameter is called the inner loop. In practice, the solution barely changes after a few outer iterations and the number of iterations is usually set to 3.
 
 Implementation
 --------------
 
-There are two version of the MFR algorithm currently implemented. One relies on scipy.sparse library which is more commonly available but it is slower. The other uses cholesky decomposition cholmod from scikit sparse library for solving the regularised problem :eq:`tichonov`. This method is significantly faster for large grids.
+The algorithm is implemented in :class:`~tomotok.inversions.mfr.MinimumFisherRegularisation`. It wraps a :class:`~tomotok.inversions.base.RegularisedInversion` (usually :class:`~tomotok.inversions.tikhonov.Tikhonov`) that performs the inner loop, i.e. determines the regularisation parameter using its regularisation selector and solves :eq:`tikhonov`. A list of inversions, one for each outer iteration, can be provided instead, e.g. to use a :class:`~tomotok.inversions.base.FixedSelector` with a different value of :math:`\alpha` in each iteration and skip the inner loop optimisation. The outer loop is terminated after ``mfi_num_max`` iterations.
+
+The regularisation matrix :eq:`mfr_regularisation` is constructed from the list of derivative matrices and anisotropy coefficients passed to the call using :func:`~tomotok.regularisations.matrices.weighted_squares`. Instead of a fixed value :math:`w_\mathrm{max}`, the previous solution is clipped from below at ``weight_floor`` (:math:`\varepsilon`) times its maximum before computing the weights
+
+.. math::
+
+   w_{ii} = \frac{1}{\max \left( g_i^\mathrm{prev}, \, \varepsilon \max_j g_j^\mathrm{prev} \right)} \,,
+
+which corresponds to :math:`w_\mathrm{max} = 1 / (\varepsilon \max_j g_j^\mathrm{prev})`. This also bounds the weights for small positive values and keeps the regularisation matrix well conditioned. In the first iteration without an initial estimate, all weights are equal to one.
+
+The speed of the inversion depends mainly on the solver used for :eq:`tikhonov`. The default dense Cholesky decomposition is suitable for small grids, while sparse Cholesky decomposition (e.g. :class:`~tomotok.inversions.solvers.sksparse.SksparseCholesky` from the optional scikit-sparse backend) is significantly faster for large grids.
 
 References
 ----------
