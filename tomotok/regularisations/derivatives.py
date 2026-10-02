@@ -31,7 +31,7 @@ def all_direction_derivative_matrices(
         Rows and columns representing False nodes are removed from derivative matrix.
         If mask is None, all rows and columns are returned.
     compensate_edges : bool, optional
-        Subtracts from diagonal so that sum of each row is zero, by default False.
+        Subtracts from diagonal so that sum of each row is zero, by default True.
     compensation_fraction : float, optional
         Fraction of diagonal elements to be subtracted, by default 1.
 
@@ -41,7 +41,7 @@ def all_direction_derivative_matrices(
         List of derivative matrices for all 8 directions with following order:
         right, top-right, top, top-left, left, bottom-left, bottom, bottom-right
     """
-    kw = dict(scheme=scheme, mask=mask, compensate_edges=compensate_edges, compensation_fraction=compensation_fraction)
+    kw = {'scheme': scheme, 'mask': mask, 'compensate_edges': compensate_edges, 'compensation_fraction': compensation_fraction}
     derivatives = [
         derivative_matrix(grid, 'right', **kw),
         derivative_matrix(grid, 'top-right', **kw),
@@ -63,22 +63,19 @@ def standard_anisotropic_derivative_matrices(
     compensation_fraction: float = 1,
 ) -> list[sparse.csc_array]:
     """
-    Creates isotropic derivative matrices for parallel and perpendicular directions.
+    Creates anisotropic derivative matrices for parallel and perpendicular directions.
 
     Parameters
     ----------
     grid : RegularGrid
-    fluxes : numpy.ndarray
+    flux : numpy.ndarray
         Matrix with magnetic flux values, shape has to match grid
-    scheme : str, optional
-        Selects numerical scheme to be used. Can be 'forward', 'backward', 'central', 'second'.
-        The default value is 'forward'.
     mask : numpy.ndarray, optional
         A bool mask determining nodes of regular grid to keep, by default None.
         Rows and columns representing False nodes are removed from derivative matrix.
         If mask is None, all rows and columns are returned.
     compensate_edges : bool, optional
-        Subtracts from diagonal so that sum of each row is zero, by default False.
+        Subtracts from diagonal so that sum of each row is zero, by default True.
     compensation_fraction : float, optional
         Fraction of row sum to subtract from diagonal, by default 1.
 
@@ -88,7 +85,7 @@ def standard_anisotropic_derivative_matrices(
         List of derivative matrices for parallel and perpendicular directions in following order:
         parallel counter clockwise, perpendicular counter clockwise, parallel clockwise, perpendicular clockwise
     """
-    kw = dict(mask=mask, compensate_edges=compensate_edges, compensation_fraction=compensation_fraction)
+    kw = {'mask': mask, 'compensate_edges': compensate_edges, 'compensation_fraction': compensation_fraction}
     derivatives = [
         anisotropic_derivative_matrix(grid, flux, 'parallel', 'forward', **kw),
         anisotropic_derivative_matrix(grid, flux, 'perpendicular', 'forward', **kw),
@@ -176,7 +173,7 @@ def derivative_matrix(
         Rows and columns representing False nodes are removed from derivative matrix.
         If mask is None, all rows and columns are returned.
     compensate_edges : bool, optional
-        Subtracts from diagonal so that sum of each row is zero, by default False.
+        Subtracts from diagonal so that sum of each row is zero, by default True.
     compensation_fraction : float, optional
         Fraction of row sum to subtract from diagonal, by default 1.
 
@@ -190,7 +187,7 @@ def derivative_matrix(
     reduce_matrix : reduces matrix by cutting out rows and columns representing unwanted nodes
     compensate_matrix : subtracts from diagonal so that sum of each row is zero or nearly zero
     """
-    kw_diags = dict(format='csc', shape=(grid.size, grid.size))
+    kw_diags = {'format': 'csc', 'shape': (grid.size, grid.size)}
     value_diags = [1.0]
     center = sparse.diags_array(value_diags, offsets=[0], **kw_diags)
     right = sparse.diags_array(value_diags, offsets=[1], **kw_diags)
@@ -279,7 +276,7 @@ def laplace_matrix(
         Rows and columns representing False nodes are removed from derivative matrix.
         If mask is None, all rows and columns are returned.
     compensate_edges : bool, optional
-        Subtracts from diagonal so that sum of each row is zero, by default False.
+        Subtracts from diagonal so that sum of each row is zero, by default True.
     diagonals : bool, optional
         Selects whether to use diagonal neighbors in matrix, by default True.
 
@@ -287,7 +284,7 @@ def laplace_matrix(
     -------
     scipy.sparse.csc_matrix
     """
-    kw_diags = dict(format='csc', shape=(grid.size, grid.size))
+    kw_diags = {'format': 'csc', 'shape': (grid.size, grid.size)}
     value_diags = [1.0]
     center = sparse.diags_array(value_diags, offsets=[0], **kw_diags)
     right = sparse.diags_array(value_diags, offsets=[1], **kw_diags)
@@ -347,6 +344,10 @@ def anisotropic_derivative_matrix(
         derivative scheme used, by default 'forward'
          - forward is in the direction of positive angle i.e. counter clockwise
          - backward is in the direction of negative angle i.e. clockwise
+    compensate_edges : bool, optional
+        Subtracts from diagonal so that sum of each row is zero, by default True.
+    compensation_fraction : float, optional
+        Fraction of row sum to subtract from diagonal, by default 1.
 
     Returns
     -------
