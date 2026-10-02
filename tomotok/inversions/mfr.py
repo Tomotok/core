@@ -25,12 +25,18 @@ class MinimumFisherRegularisation:
         the method used to terminate the MFI loop, currently only "max_iter" is supported
     mfi_num_max : int
         the maximum number of MFI loops before the iteration is stopped
+    weight_floor : float
+        minimum value of the previous solution relative to its maximum used when computing
+        node weights (``1 / g``) for the next MFI iteration, preventing near-zero or negative
+        values (e.g. from a non-negativity-constrained solver) from producing unbounded weights
+        and an ill-conditioned regularisation matrix
     """
     def __init__(
-        self, 
+        self,
         inversion: RegularisedInversion | list[RegularisedInversion],
         termination_method: str = "max_iter",
         mfi_num_max: int = 3,
+        weight_floor: float = 1e-6,
     ):
         if isinstance(inversion, list):
             if not all(isinstance(s, RegularisedInversion) for s in inversion):
@@ -48,6 +54,7 @@ class MinimumFisherRegularisation:
             raise TypeError(msg)
         self.termination_method = termination_method
         self.mfi_num_max = mfi_num_max
+        self.weight_floor = weight_floor
 
     def __call__(
         self, 
@@ -93,8 +100,8 @@ class MinimumFisherRegularisation:
 
         # MFI loop (outer)
         for inversion in self.inversion_list:
-            node_weights = 1 / g
-            node_weights[g <= 0] = np.nanmax(node_weights)
+            g_floor = np.maximum(g, g.max() * self.weight_floor)
+            node_weights = 1 / g_floor
             regularisation = weighted_squares(
                 derivatives,
                 derivative_weights,

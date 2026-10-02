@@ -2,9 +2,11 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Contains inversion class for Biorthogonal Basis Decomposition Algorithm proposed by J. Cavlier. 
-It is a simplified form of wavelet-vaguelette decomposition algorithm by R. Nguyen van Yen
+Contains inversion class for the Biorthogonal Basis Decomposition algorithm proposed by J. Cavalier [BOB1]_.
+It is a simplified form of the wavelet-vaguelette decomposition algorithm by R. Nguyen van Yen [BOB2]_.
 
+References
+----------
 .. [BOB1] Jordan Cavalier et al., Nucl. Fusion 59 (2019): 056025
 .. [BOB2] R. Nguyen van Yen et al., Nucl. Fusion 52 (2011): 013005
 """
@@ -30,8 +32,8 @@ class Bob(Inversion):
         :math:`\mathbf{b}_i` basis vectors of reconstruction plane
     basis_inv : scipy.sparse.spmatrix
         inverse of basis matrix, used for transformation to node basis
-    decomposed_matrix : scipy.sparse.csr_matrix
-        :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
+    adjoint_basis : scipy.sparse.csr_array or None
+        :math:`\tilde{\mathbf{b}}_i` adjoint basis vectors in columns, used to transform image into reconstruction plane
     norms : numpy.ndarray
         node norms used in thresholding
     """
@@ -56,6 +58,11 @@ class Bob(Inversion):
         self._basis = basis
         self._adjoint_basis = decomposed_matrix
         self._norms: np.ndarray | None = None
+
+    @property
+    def adjoint_basis(self) -> sparse.sparray | None:
+        """Adjoint basis vectors in columns with shape (#channels, #decomposition vectors), None before decomposition."""
+        return self._adjoint_basis
 
     # @property
     # def basis(self):
