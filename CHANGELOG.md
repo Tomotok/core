@@ -15,10 +15,15 @@ New Features
  - tests for line of sight saving and loading
  - tests for derivative matrix computation
  - add github workflow for testing code on multiple python versions
+ - read-only `adjoint_basis` property of `Bob`
+ - `square` keyword of `FastSelector`
 
 Fixes
 -----
  - updated derivative matrix checker
+ - Algebraic.invert no longer fails when data array is passed
+ - GevAlgebraic now reproduces the Phillips-Tikhonov solution, decomposition stores generalised singular values instead of their squares
+ - GevAlgebraic no longer fails when the number of channels is not smaller than the number of nodes and discards numerically zero eigenvalues instead of producing NaN for rank-deficient geometry matrix
 
 Version 1.3.1 (03.01.2024)
 ==========================
