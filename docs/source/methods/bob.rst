@@ -1,4 +1,4 @@
-BiOrthogonal Basis Decomposition
+Biorthogonal Basis Decomposition
 ================================
 
 The biorthogonal basis decomposition (BoB) algorithm was first introduced in [B1]_ as a wavelet-vaguelette decomposition. It utilised a wavelet basis that allowed noise suppression by the so-called thresholding method. It was later modified in [B2]_ for a simple node basis in the reconstruction plane and successfully used for edge plasma tomography using a fast visible camera. The noise suppression capability of this simplified version is limited compared to the original algorithm, but it still performs well enough to enable the use of thresholding for studies of blob movement in the edge plasma.
@@ -110,7 +110,7 @@ The algorithm is implemented in :class:`~tomotok.inversions.bob.Bob`. The ``deco
 
 No tools for creating wavelet bases are currently provided; a simple node basis represented by an identity matrix can be used.
 
-The decomposition is implemented using sparse matrices. The inverse of :math:`\mathbf{A}^T \cdot \mathbf{A}` is computed by a :class:`~tomotok.inversions.solvers.Solver` backend, by default the dense :class:`~tomotok.inversions.solvers.CholeskySolver`. Alternatives are :class:`~tomotok.inversions.bob.SparseInvSolver` using the sparse inverse from SciPy, or sparse Cholesky decomposition from the optional backends. The Cholesky decomposition requires the matrix to be positive definite. This requires the projections of all decomposition basis vectors to be linearly independent, which is not always the case for visible cameras and the simple node basis, e.g. when some nodes are not observed or have nearly identical projections. Therefore, a simple regularisation by the identity matrix, equivalent to the standard Tikhonov regularisation, can be enabled by the ``reg_factor`` parameter. It is given relative to the maximum of the inverted matrix and typical values are lower than 0.001.
+The decomposition is implemented using sparse matrices. The inverse of :math:`\mathbf{A}^T \cdot \mathbf{A}` is computed by a :class:`~tomotok.inversions.solvers.base.Solver` backend, by default the dense :class:`~tomotok.inversions.solvers.scipy.CholeskySolver`. Alternatives are :class:`~tomotok.inversions.bob.SparseInvSolver` using the sparse inverse from SciPy, or sparse Cholesky decomposition from the optional backends. The Cholesky decomposition requires the matrix to be positive definite. This requires the projections of all decomposition basis vectors to be linearly independent, which is not always the case for visible cameras and the simple node basis, e.g. when some nodes are not observed or have nearly identical projections. Therefore, a simple regularisation by the identity matrix, equivalent to the standard Tikhonov regularisation, can be enabled by the ``reg_factor`` parameter. It is given relative to the maximum of the inverted matrix and typical values are lower than 0.001.
 
 References
 ----------

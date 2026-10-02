@@ -11,7 +11,7 @@ Use Python 3.10 or newer.
 
 ## Testing
 
-Run the full test suite before opening a merge request.
+Run the full test suite before opening a pull/merge request.
 
 ```bash
 ./dev/run_tests.sh
@@ -36,6 +36,11 @@ Regenerate API pages and HTML docs when public API or doc pages change.
 ./dev/docs_html.sh
 ```
 
+Figures in the documentation are not generated during the build. They are created by scripts stored next to
+them (e.g. `docs/source/methods/figures/make_bob_figures.py`). When a change of the code affects a figure,
+rerun the corresponding script and commit the updated figures. `tests/test_docs_figures.py` runs the scripts
+on a small configuration to check that they work with the current code.
+
 ## Commit message rules
 
 - Start with a verb in imperative form
@@ -45,7 +50,7 @@ Regenerate API pages and HTML docs when public API or doc pages change.
 ## Docstrings (NumPy style)
 
 Use NumPy-style docstrings as described here:
-https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html
+https://numpydoc.readthedocs.io/en/latest/format.html
 
 Project conventions compatible with NumPy style:
 - For multiline docstrings, place the opening triple quotes on their own line and start the summary on the next line
@@ -88,7 +93,7 @@ class Foo:
         self.attr = param1 + param2
 ```
 
-## Merge request checklist
+## Pull/merge request checklist
 
 Before requesting review:
 - Run tests locally

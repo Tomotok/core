@@ -33,7 +33,7 @@ Fixes
  - numpy ndarray dtype parameters to be compatible with newer numpy versions
 
 Version 1.3 (21.07.2023)
-=======================
+========================
 
 Changes
 -------

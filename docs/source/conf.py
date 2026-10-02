@@ -15,15 +15,14 @@
 
 import sys
 import os
-import re
 
-import numpydoc
+from packaging.version import Version
 
 
 with open(os.path.join(os.path.dirname(__file__), '../../tomotok/VERSION')) as version_file:
     ver = version_file.read().strip()
 
-ver_short = re.split('[a,b,r,rc]+', ver)[0]
+ver_short = '{0.major}.{0.minor}'.format(Version(ver))
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -52,7 +51,7 @@ extensions = [
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = []
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -101,6 +100,8 @@ exclude_patterns = []
 autodoc_default_options = {
     'members' : True,
     'special-members' : '__call__',
+    # document only objects defined in a module, so objects re-exported by packages are not documented twice
+    'ignore-module-all' : True,
     }
 autodoc_member_order = 'bysource'
 # Optional solver backends (see pyproject.toml extras); mocked so their modules
@@ -110,6 +111,14 @@ autodoc_mock_imports = ['jax', 'optax', 'sksparse', 'cvxpy']
 # numpydoc
 numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree = False
+# methods are already listed by autodoc members option
+numpydoc_show_class_members = False
+
+# private paths of types used in annotations that have no public documentation target
+nitpick_ignore = [
+    ('py:class', 'numpy._typing.ArrayLike'),
+    ('py:class', 'h5py._hl.group.Group'),
+]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -158,7 +167,7 @@ html_theme = "sphinx_book_theme"
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = 'Tomotok'
+html_title = f'Tomotok {release}'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -175,7 +184,7 @@ html_title = 'Tomotok'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

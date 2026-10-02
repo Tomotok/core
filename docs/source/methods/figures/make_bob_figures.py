@@ -1,6 +1,9 @@
 # Licensed under the EUPL-1.2 or later.
 """
-Generates figures for the BiOrthogonal Basis decomposition documentation page.
+Generates figures for the Biorthogonal Basis Decomposition documentation page.
+
+The figures are not generated during the documentation build. Rerun this script and commit the figures
+when a change of the code affects them; tests/test_docs_figures.py checks that the script still runs.
 
 Uses a synthetic tangentially viewing camera with 200 x 200 pixels observing a grid of 50 x 50 nodes.
 Computing the geometry matrix takes about a minute. An already computed matrix can be provided
@@ -38,26 +41,24 @@ SEED = 12345678
 NODE = 1425  # node used for demonstration of basis vectors
 
 
-def compute_gmat() -> tuple[sparse.csr_array, RegularGrid]:
-    grid = RegularGrid(50, 50, rlims=(0.2, 0.7), zlims=(-0.25, 0.25))
-    starts, ends = generate_sightlines(pinhole=PINHOLE, num=RESOLUTION, fov=FOV, axis=AXIS, length=3)
-    gmat = sparse_line(starts, ends, grid, step=1e-4, rmin=grid.rmin)
+def compute_gmat(
+    resolution: tuple[int, int] = RESOLUTION, grid_shape: tuple[int, int] = (50, 50), step: float = 1e-4
+) -> tuple[sparse.csr_array, RegularGrid]:
+    """Computes geometry matrix of the synthetic camera with given resolution for a grid with shape (nr, nz)."""
+    grid = RegularGrid(*grid_shape, rlims=(0.2, 0.7), zlims=(-0.25, 0.25))
+    starts, ends = generate_sightlines(pinhole=PINHOLE, num=resolution, fov=FOV, axis=AXIS, length=3)
+    gmat = sparse_line(starts, ends, grid, step=step, rmin=grid.rmin)
     return gmat, grid
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--gmat', type=Path, help='load geometry matrix from file instead of computing it')
-    parser.add_argument('--save-gmat', type=Path, help='save computed geometry matrix to file')
-    args = parser.parse_args()
-
-    if args.gmat is not None:
-        gmat, grid = load_sparse_gmat(args.gmat)
-    else:
-        gmat, grid = compute_gmat()
-        if args.save_gmat is not None:
-            save_sparse_gmat(args.save_gmat, gmat, grid)
-
+def make_figures(
+    gmat: sparse.csr_array,
+    grid: RegularGrid,
+    resolution: tuple[int, int] = RESOLUTION,
+    output: Path = OUTPUT,
+    node_index: int = NODE,
+) -> None:
+    """Inverts a synthetic image of a phantom and saves the figures to the output directory."""
     # phantom with hollow profile moved from the grid centre
     phantom = gaussian_on_flux(elliptical_flux(grid.nr, grid.nz), amplitude=2000, center=0.3, width=0.05)
     phantom = np.roll(phantom, (3, -5), (0, 1))
@@ -77,9 +78,9 @@ def main():
 
     # basis vectors for a single node
     node = np.zeros(grid.size)
-    node[NODE] = 1
+    node[node_index] = 1
     projection = gmat @ node
-    adjoint = bob.adjoint_basis[:, [NODE]].toarray().flatten()
+    adjoint = bob.adjoint_basis[:, [node_index]].toarray().flatten()
 
     plt.rcParams['image.cmap'] = 'cividis'
 
@@ -89,14 +90,15 @@ def main():
     axs[0].set_xlabel('R [m]')
     axs[0].set_ylabel('z [m]')
     axs[0].set_title(r'$\mathbf{b}_i$')
-    axs[1].imshow(projection.reshape(RESOLUTION))
+    axs[1].imshow(projection.reshape(resolution))
     axs[1].set_title(r'$\mathbf{a}_i$')
-    axs[2].imshow(adjoint.reshape(RESOLUTION))
+    axs[2].imshow(adjoint.reshape(resolution))
     axs[2].set_title(r'$\tilde{\mathbf{b}}_i$')
     for ax in axs[1:]:
         ax.set_axis_off()
     fig.tight_layout()
-    fig.savefig(OUTPUT / 'bob_basis.png', dpi=150)
+    fig.savefig(output / 'bob_basis.png', dpi=150)
+    plt.close(fig)
 
     limits = dict(
         vmin=min(phantom.min(), reconstruction.min(), thresholded.min()),
@@ -110,7 +112,23 @@ def main():
         ax.set_title(title)
     axs[0].set_ylabel('z [m]')
     fig.colorbar(cmesh, ax=axs, label='Emissivity [-]', shrink=0.8)
-    fig.savefig(OUTPUT / 'bob_thresholding.png', dpi=150)
+    fig.savefig(output / 'bob_thresholding.png', dpi=150)
+    plt.close(fig)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--gmat', type=Path, help='load geometry matrix from file instead of computing it')
+    parser.add_argument('--save-gmat', type=Path, help='save computed geometry matrix to file')
+    args = parser.parse_args()
+
+    if args.gmat is not None:
+        gmat, grid = load_sparse_gmat(args.gmat)
+    else:
+        gmat, grid = compute_gmat()
+        if args.save_gmat is not None:
+            save_sparse_gmat(args.save_gmat, gmat, grid)
+    make_figures(gmat, grid)
 
 
 if __name__ == '__main__':

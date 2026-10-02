@@ -20,31 +20,23 @@ Newest features with not fully guaranteed backward compatibility are implemented
 
 ## Contents
 
-### Inversions
-The algorithms accept inputs in the form of `numpy.ndarray` or `scipy.sparse` matrix objects, allowing them to run independently of the rest of the package.
-
-There are three main types of algorithms implemented:
+The inversion methods in `tomotok.inversions` form the main part of Tomotok. They accept inputs in the form of `numpy.ndarray` or `scipy.sparse` objects, allowing them to run independently of the rest of the package. There are three main types of algorithms implemented:
 - Minimum Fisher Regularisation (MFR)
 - Linear algebraic methods (LAME)
-- Biorthogonal Basis decomposition (BOB)
+- Biorthogonal Basis Decomposition (BoB)
 
-### Tools
-Apart from the main inversion methods, some utility features are also included.
+The other three subpackages complement the inversion methods by preparing their inputs and supporting the analysis:
+- `tomotok.geometry`: reconstruction grids, generation of lines of sight and geometry matrix computation using numerical integration and a single line of sight approximation
+- `tomotok.regularisations`: derivative matrices, both isotropic and anisotropic (based on magnetic flux surfaces), and their combination into regularisation matrices
+- `tomotok.tools`: templates of database interfaces, phantom emissivity generators and other utilities
 
-A simple synthetic diagnostic framework is implemented for testing the implemented algorithms.
-It uses regular rectangular nodes and assumes toroidal symmetry, as it is the simplest case often used for inversions of tokamak plasma radiation.
-
-Implemented utility features:
-- Geometry matrix computation using numerical integration and a single line of sight approximation
-- Smoothing matrix computation, both isotropic and anisotropic (based on magnetic flux surfaces)
-- Simple phantom model generators (isotropic and anisotropic)
-- Other tools for processing
+The complementary subpackages assume toroidal symmetry and regular rectangular nodes, as it is the simplest case often used for inversions of tokamak plasma radiation.
 
 ## Citing the Code
 
 When used for research purposes, please cite the following paper. To cite specific inversion methods, please refer to the corresponding papers included in the documentation.
 
-"J. Svoboda, J. Cavalier, O. Ficker, M. Imrisek, J. Mlynar and M. Hron, *Tomotok: python package for tomography of tokamak plasma radiation*, Journal of Instrumentation 16.12 (2021): C12015."
+"J. Svoboda, J. Cavalier, O. Ficker, M. Imríšek, J. Mlynář and M. Hron, *Tomotok: python package for tomography of tokamak plasma radiation*, Journal of Instrumentation 16.12 (2021): C12015."
 [DOI 10.1088/1748-0221/16/12/c12015](https://doi.org/10.1088/1748-0221/16/12/c12015)
 
 ## Contributors
