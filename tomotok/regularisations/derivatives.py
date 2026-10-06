@@ -2,7 +2,7 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Handles computation of derivative matrices used for regularization in MFR algorithm.
+Handles computation of derivative matrices used to construct regularisation matrices of regularised inversion methods.
 """
 import numpy as np
 from scipy import sparse

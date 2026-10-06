@@ -1,35 +1,45 @@
 # Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences. 
 # Licensed under the EUPL-1.2 or later.
+import numpy as np
+from numpy.typing import ArrayLike
 from scipy import sparse
 
 
 def weighted_squares(
     matrices: sparse.sparray | list[sparse.sparray],
-    matrix_weights: float | list[float] | None = None, 
-    node_weights: float | list[float] | None = None,
-) -> sparse.csc_matrix:
-    """Computes regularisation matrix as a weighted sum of squares of the input matrices.
+    matrix_weights: list[float] | list[np.ndarray] | None = None,
+    node_weights: ArrayLike | None = None,
+) -> sparse.csr_array:
+    """
+    Computes regularisation matrix as a weighted sum of squares of the input matrices.
 
-    The weights can be based on a previous results creating an iterative non-linear regularisation scheme.
-    For example, using inverse of the solution from the previous iteration is used in the MFR algorithm.
+    The node weights can be based on a previous result, creating an iterative nonlinear regularisation scheme.
+    For example, the MFR algorithm uses the inverse of the solution from the previous iteration as node weights.
 
     Parameters
     ----------
-    matrices : sparse.sparray or list of sparse.sparray
+    matrices : scipy.sparse.sparray or list of scipy.sparse.sparray
         sparse matrices with numerical derivative operators with shape (#nodes, #nodes)
-    matrix_weights : float or list of floats, optional
-        weights assigned to individual matrices
+    matrix_weights : list of float or list of numpy.ndarray, optional
+        weights of individual matrices, i.e. anisotropy coefficients, normalised to unit sum,
+        a list of arrays with shape (#nodes,) specifies the weight of each matrix in each node
+        (row of the matrix), the weights are then normalised to unit sum in each node separately,
         by default all weights are equal
-        if list of floats, the matrix weights are specified for each matrix
-        if list of arrays, the matrix weights are specified for each node of each matrix
-    node_weights : float or list of floats, optional
-        weights assigned to individual nodes, default is 1 for all nodes
-        can be used to create a non-linear regularisation matrix
+    node_weights : array-like, optional
+        weights of individual nodes with shape (#nodes,), by default 1 for all nodes,
+        can be used to create a nonlinear regularisation matrix
 
     Returns
     -------
-    sparse.csc_array
+    scipy.sparse.csr_array
         regularisation matrix with shape (#nodes, #nodes)
+
+    Raises
+    ------
+    ValueError
+        if the number of matrix weights differs from the number of matrices
+    TypeError
+        if matrix weights are not a list
     """
     if isinstance(matrices, sparse.sparray):
         matrices = [matrices]

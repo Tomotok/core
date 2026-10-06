@@ -24,10 +24,10 @@ def save_sparse_gmat(floc: str | Path, gmat: sparse.sparray, grid: RegularGrid, 
     floc : str or pathlib.Path
         file location
     gmat : sparse.sparray
-        with shape (#chanels, #nodes)
+        with shape (#channels, #nodes)
     grid : RegularGrid
         class describing regular grid the gmat was computed for
-    attrs_dict : dict, optional
+    attrs_dct : dict, optional
         additional attributes to be saved in hdf file
     """
     floc = Path(floc)
@@ -101,17 +101,17 @@ def save_dense_gmat(floc: str | Path, gmat: np.ndarray, grid: RegularGrid, attrs
     """
     Saves geometry matrix together with description of the grid.
 
-    Currently suports only dense matrices and regular rectangular grids.
+    Currently supports only dense matrices and regular rectangular grids.
 
     Parameters
     ----------
     floc : str or pathlib.Path
         file location
     gmat : np.ndarray
-        with shape (#chanels, #nodes)
+        with shape (#channels, #nodes)
     grid : RegularGrid
         class describing regular grid the gmat was computed for
-    attrs_dict : dict, optional
+    attrs_dct : dict, optional
         additional attributes to be saved in hdf file
     """
     floc = Path(floc)

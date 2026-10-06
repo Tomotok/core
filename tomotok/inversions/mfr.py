@@ -109,7 +109,8 @@ class MinimumFisherRegularisation:
             used for normalisation of the inputs and in the Pearson test
         derivative_weights : list of float or list of array-like, optional
             anisotropy coefficients, i.e. weights of the individual derivative matrices, normalised to unit sum,
-            a list of arrays specifies the weights for each node of each derivative matrix,
+            a list of arrays with shape (#nodes,) specifies the weight of each derivative matrix in each node
+            (row of the matrix), the weights are then normalised to unit sum in each node separately,
             by default None, which corresponds to equal weights of all derivative matrices
         initial_guess : numpy.ndarray, optional
             initial estimate of the solution with shape (#nodes,), used to compute node weights in the first MFI iteration,

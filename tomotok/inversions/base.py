@@ -241,12 +241,12 @@ class PearsonSelector(RegularisationSelector):
 
         Inverses signals using given regularisation parameter and computes chi2 test
 
-        Stores pearson test result in attribute last_chi.
+        Keeps track of the value closest to the ideal Pearson test result.
 
         Parameters
         ----------
         logalpha : float
-            natural logarithm of regularisation parameter
+            decadic logarithm of regularisation parameter
 
         Returns
         -------

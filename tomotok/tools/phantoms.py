@@ -9,7 +9,7 @@ A function for creation of a simple flux map with elliptical shape is also provi
 Additionally, a function for creation of a polar phase matrix is provided, 
 which can be used to create magnetic island-like structures in the emissivity phantom.
 """
-from warnings import warn
+import warnings
 
 import numpy as np
 
@@ -19,7 +19,26 @@ from tomotok.geometry import RegularGrid
 def regular_elliptical_flux(
     grid: RegularGrid, span: float | tuple[float, float] = 1.5
 ) -> np.ndarray:
-    """Creates a matrix of artificial flux surfaces with elliptical shape based on provided grid."""
+    """
+    Creates a matrix of artificial flux surfaces with elliptical shape based on provided grid.
+
+    Parameters
+    ----------
+    grid : RegularGrid
+        grid for which the flux surfaces are generated
+    span : float or tuple of two floats, optional
+        flux value at the center of grid edge, by default 1.5,
+        if tuple, first value is for radial axis, second for vertical
+
+    Returns
+    -------
+    numpy.ndarray
+        matrix with generated fluxes with shape (nz, nr)
+
+    See Also
+    --------
+    elliptical_flux
+    """
     return elliptical_flux(grid.nr, grid.nz, span)
 
 
@@ -64,37 +83,40 @@ def gaussian_on_flux(
     limit: float = 1, limit_width: float = 0.2, limit_power: int = 2
 ) -> np.ndarray:
     r"""
-    Creates gaussian artificial emissivity profile by transforming provided flux values
+    Creates gaussian artificial emissivity profile by transforming provided flux values.
 
     .. math::
-        f = a \mathrm{e}^{-(f - c)^2 / w }
+        \varepsilon(\psi) = a \, \mathrm{e}^{-(\psi - c)^2 / w} \,,
 
-    The limit width parameter allows to create a smooth transition from gaussian profile to zero at the limit value of flux.
-    This is done by multiplying the gaussian profile with a polynomial function that goes from 1 to 0 in the range of limit - limit_width to limit.
+    where :math:`\psi` are the flux values, :math:`a` the amplitude, :math:`c` the center and :math:`w` the width.
+    Note that the width corresponds to :math:`2 \sigma^2` of the normal distribution, i.e. it has units of squared flux.
+
+    The profile smoothly reaches zero at the limit value of flux. In the range from ``limit - limit_width`` to ``limit``,
+    the value of the gaussian at the limit multiplied by a polynomial rising from 0 to 1 is subtracted from the profile,
+    and negative values are set to zero, so the emissivity is zero for flux values above the limit (if limit > center).
 
     Parameters
     ----------
     flux : np.ndarray
         Flux values for transformation, any shape is supported
     amplitude : float, optional
-        maximum of gaussian profile, 
+        maximum of gaussian profile, by default 1
     center : float, optional
-        center of gaussian profile
-        allows hollow profile generation when mapped on psi
+        center of gaussian profile, by default 0,
+        nonzero values allow hollow profile generation when mapped on flux
     width : float, optional
-        width of gaussian profile    
+        width of gaussian profile, :math:`2 \sigma^2` in squared flux units, by default 0.1
     limit : float, optional
-        flux value where emissivity is forced to reach zero
-        if flux > limit emissivity is set to zero
+        flux value where emissivity reaches zero, by default 1
     limit_width : float, optional
-        width of transition from gaussian profile to zero at limit value of flux
-    limit_power : float, optional
-        power of polynomial transition from gaussian profile to zero at limit value of flux
+        width of transition from gaussian profile to zero at limit value of flux, by default 0.2
+    limit_power : int, optional
+        power of polynomial transition from gaussian profile to zero at limit value of flux, by default 2
 
     Returns
     -------
     numpy.ndarray
-        Transformed values of x with same dimensions
+        emissivity profile with the same shape as `flux`
     """
     center_dst_sq = (flux - center) * (flux - center)
     res = np.exp(-center_dst_sq / width)
@@ -131,6 +153,11 @@ def polar_phase_matrix(
         initial phase shift in degrees
     center : tuple of two floats, optional
         center of polar phase, if None, grid centre is used
+
+    Returns
+    -------
+    numpy.ndarray
+        matrix with values of the sine phase with shape (nz, nr)
     """
     center = center or grid.centre
     shift = np.deg2rad(shift)
@@ -164,7 +191,7 @@ def iso_psi(nx: int, ny: int, span: float = 1.5) -> np.ndarray:
     numpy.ndarray
         Matrix with generated profile
     """
-    warn(
+    warnings.warn(
         "Function iso_psi is deprecated and will be removed in future versions. " +
         "Use `elliptical_flux` instead.",
         DeprecationWarning,
@@ -184,7 +211,7 @@ def gauss(
     Creates anisotropic gaussian artificial emissivity by 1D transform of x
 
     .. math::
-        f = amp \left( \mathrm{e}^{-(x-cen)^2 / w } - \mathrm{e}^{-(lim-cen)^2 / w)} \right)
+        f = amp \left( \mathrm{e}^{-(x-cen)^2 / w } - \mathrm{e}^{-(lim-cen)^2 / w} \right)
         
     .. deprecated:: 2.0
         Use :func:`gaussian_on_flux` instead.
@@ -211,7 +238,7 @@ def gauss(
     numpy.ndarray
         Transformed values of x with same dimensions
     """
-    warn(
+    warnings.warn(
         "Function `gauss` is deprecated and will be removed in future versions. " +
         "Use `gaussian_on_flux` instead.", 
         DeprecationWarning,
@@ -235,7 +262,7 @@ def gauss_iso(
     .. deprecated:: 2.0
         Use :func:`gaussian_on_flux` instead.
     """
-    warn(
+    warnings.warn(
         "Function gauss_iso is deprecated and will be removed in future versions. " +
         "Use `gaussian_on_flux` instead.", DeprecationWarning,
         stacklevel=2
@@ -268,7 +295,7 @@ def polar_phase(x: np.ndarray, num: int = 3, shift: float = 0) -> np.ndarray:
     numpy.ndarray
         Matrix with applied polar phase
     """
-    warn(
+    warnings.warn(
         "Function polar_phase is deprecated and will be removed in future versions. " + 
         "Use `polar_phase_matrix` instead.", 
         DeprecationWarning,
@@ -302,11 +329,11 @@ def islands(
     .. deprecated:: 2.0
         Use :func:`gaussian_on_flux` and :func:`polar_phase_matrix` instead
 
-    See also
+    See Also
     --------
-    gauss, polar_phase
+    gaussian_on_flux, polar_phase_matrix
     """
-    warn(
+    warnings.warn(
         "Function islands is deprecated and will be removed in future versions. " +
         "Use `gaussian_on_flux` and `polar_phase_matrix` instead.",
         DeprecationWarning,

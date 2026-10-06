@@ -15,6 +15,13 @@ from .base import Solver
 class JaxCholesky(Solver):
     """Uses JAX's Cholesky decomposition for solving linear systems."""
     def __init__(self, enable_x64: bool = True) -> None:
+        """
+        Parameters
+        ----------
+        enable_x64 : bool, optional
+            enables double precision in JAX, by default True,
+            note that this changes the global JAX configuration
+        """
         config.update("jax_enable_x64", enable_x64)
         super().__init__()
 
@@ -55,6 +62,19 @@ class JaxNNLS(Solver):
     including quadratic, exponential and softplus functions.
     """
     def __init__(self, parametrization: str = 'quadratic', init_values: float = 1.0) -> None:
+        """
+        Parameters
+        ----------
+        parametrization : str {'quadratic', 'softplus', 'exp'}, optional
+            function mapping the optimised variables to the non-negative solution, by default 'quadratic'
+        init_values : float, optional
+            initial value of the optimised variables, by default 1.0
+
+        Raises
+        ------
+        ValueError
+            if the parametrization is not supported
+        """
         super().__init__()
         self.init_values = init_values
         if parametrization == 'quadratic':

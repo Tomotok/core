@@ -8,11 +8,18 @@ from .base import Solver
 
 class CholeskySolver(Solver):
     """
-    Scipy based engine using Cholesky decomposition to solve linear systems.
+    Solves linear systems using the Cholesky decomposition from SciPy.
 
-    Implementation based on dense matrices, sparse ones are converted to dense.
+    The system matrix has to be symmetric positive definite.
+    Implementation based on dense matrices, sparse inputs are converted to dense arrays.
     """
     def __init__(self, check_finite: bool = False):
+        """
+        Parameters
+        ----------
+        check_finite : bool, optional
+            whether to check that the input matrices contain only finite numbers, by default False
+        """
         super().__init__()
         self._check_finite = check_finite
 
@@ -21,7 +28,6 @@ class CholeskySolver(Solver):
         a: np.ndarray | sparse.sparray,
         b: np.ndarray | sparse.sparray
     ) -> np.ndarray | sparse.sparray:
-        """Sparse matrices are converted to dense arrays before decomposition."""
         if sparse.issparse(a):
             a = a.toarray()
         if sparse.issparse(b):
@@ -31,7 +37,15 @@ class CholeskySolver(Solver):
 
 
 class NNLSSolver(Solver):
-    """Scipy based engine using non-negative least squares to solve linear systems."""
+    """
+    Solves linear systems using the non-negative least squares method from SciPy.
+
+    Finds the non-negative solution minimising the residual of the linear system.
+    When used by :class:`~tomotok.inversions.tikhonov.Tikhonov`, it is applied to the regularised normal equations,
+    so the result is the non-negative least squares solution of that system, which in general differs from
+    the minimum of the Tikhonov functional constrained to non-negative values.
+    Implementation based on dense matrices, sparse inputs are converted to dense arrays.
+    """
     def __init__(self):
         super().__init__()
 
@@ -40,7 +54,6 @@ class NNLSSolver(Solver):
         a: np.ndarray | sparse.sparray,
         b: np.ndarray | sparse.sparray
     ) -> np.ndarray | sparse.sparray:
-        """Sparse matrices are converted to dense arrays before decomposition."""
         if sparse.issparse(a):
             a = a.toarray()
         if sparse.issparse(b):
@@ -51,15 +64,18 @@ class NNLSSolver(Solver):
 
 class LSQSolver(Solver):
     """
-    Scipy based engine using bounded least squares to solve linear systems.
+    Solves linear systems using the bounded least squares method from SciPy.
 
-    This engine works with sparse matrices, converting dense matrices to sparse format.
-
-    It uses lsa_linear from scipy.optimize to solve the problem with bounds.
-    The default bounds are set to (0, inf) to ensure non-negativity of the solution.
-    
+    Uses :func:`scipy.optimize.lsq_linear` to find the solution within given bounds.
+    Works with sparse matrices, dense inputs are converted to sparse format.
     """
     def __init__(self, bounds: tuple[float, float] | None = (0, np.inf)):
+        """
+        Parameters
+        ----------
+        bounds : tuple of two floats, optional
+            lower and upper bound of the solution, by default (0, inf), which ensures non-negativity of the solution
+        """
         super().__init__()
         self._bounds = bounds
 

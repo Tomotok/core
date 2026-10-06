@@ -4,7 +4,7 @@
 """
 Module with numeric generators of geometry matrix.
 """
-from warnings import warn
+import warnings
 
 import numpy as np
 from scipy import sparse
@@ -50,7 +50,7 @@ def sparse_line_3d(
     --------
     sparse_line
     """
-    warn(
+    warnings.warn(
         'Function `sparse_line_3d` is deprecated and will be removed in a future version. ' +
         'Use `sparse_line` instead.',
         DeprecationWarning,
@@ -125,14 +125,14 @@ def calcam_sparse_line_3d(
     --------
     calcam_sparse_line
     """
-    warn(
+    warnings.warn(
         'Function `calcam_sparse_line_3d` is deprecated and will be removed in a future version. ' +
         'Use `calcam_sparse_line` instead.',
         DeprecationWarning,
         stacklevel=2
     )
     if steps is not None:
-        warn('"steps" parameter was deprecated by "step"', DeprecationWarning)
+        warnings.warn('"steps" parameter was deprecated by "step"', DeprecationWarning)
         step = steps
     if elong != 1.:
         dirs = elong * dirs

@@ -24,18 +24,14 @@ from tomotok.tools.hdf import sparse_to_hdf, hdf_to_sparse
 
 class Bob(Inversion):
     r"""
-    BiOrthogonal Basis decomposition
+    Biorthogonal Basis Decomposition (BoB) inversion method.
 
     Attributes
     ----------
-    basis : scipy.sparse.spmatrix
-        :math:`\mathbf{b}_i` basis vectors of reconstruction plane
-    basis_inv : scipy.sparse.spmatrix
-        inverse of basis matrix, used for transformation to node basis
+    basis_inv : scipy.sparse.sparray
+        inverse of the decomposition basis matrix, used for transformation to the node basis
     adjoint_basis : scipy.sparse.csr_array or None
         :math:`\tilde{\mathbf{b}}_i` adjoint basis vectors in columns, used to transform image into reconstruction plane
-    norms : numpy.ndarray
-        node norms used in thresholding
     """
     def __init__(
         self,
@@ -81,23 +77,23 @@ class Bob(Inversion):
         reg_factor: float = 0,
     ):
         """
-        Decomposes the geometry matrix using basis vectors
+        Decomposes the geometry matrix using basis vectors.
+
+        Computes the adjoint basis, which is stored in the `adjoint_basis` attribute.
 
         Parameters
         ----------
         gmat : scipy.sparse.csr_array or scipy.sparse.csc_array
-            geometry/contribution matrix
-        basis : sparse array
-            matrix with decomposition basis vectors
+            geometry matrix with shape (#channels, #nodes)
+        basis : scipy.sparse.csc_array
+            square matrix with decomposition basis vectors in columns, shape (#nodes, #nodes)
         reg_factor : float, optional
-            regularisation factor passed to cholesky decomposition
-            determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
-        solver_kw : dict
-            keyword parameters passed to the compute_coefficients method
+            factor of regularisation by identity matrix added before computing the inverse,
+            relative to the maximum value of the inverted matrix, by default 0 (no regularisation)
 
         See Also
         --------
-        compute_coefficients : method handling computation of coefficients to see supported solver keywords
+        compute_coordinates : method computing the inverse using the solver
         """
         los_num = gmat.shape[0]
         node_num = gmat.shape[1]

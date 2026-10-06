@@ -23,7 +23,7 @@ class Tikhonov(RegularisedInversion):
         Uses modified problem formulation and cached inputs to solve the following equation for :math:`\mathbf{g}`:
         
         .. math::
-            (\mathbf{T}^T \dcot \mathbf{T} + \alpha \mathbf{H}) \mathbf{g} = \mathbf{G}^T \mathbf{f}  
+            (\mathbf{T}^T \cdot \mathbf{T} + \alpha \mathbf{H}) \cdot \mathbf{g} = \mathbf{T}^T \cdot \mathbf{f}
 
         Parameters
         ----------
