@@ -1,3 +1,5 @@
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences.
+# Licensed under the EUPL-1.2 or later.
 import numpy as np
 from scipy import sparse
 from scipy.linalg import cho_factor, cho_solve

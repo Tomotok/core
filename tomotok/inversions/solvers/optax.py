@@ -1,3 +1,5 @@
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences.
+# Licensed under the EUPL-1.2 or later.
 import jax
 import jax.numpy as jnp
 import numpy as np
