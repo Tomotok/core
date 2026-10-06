@@ -7,7 +7,7 @@ name = "tomotok"
 dynamic = ["version"]
 description = "Collection of algorithms used for tokamak plasma tomography"
 readme = "README.md"
-license = "EUPL-1.2"
+license = "EUPL-1.2+"
 authors = [
     { name = "Jakub Svoboda", email = "svoboda@ipp.cas.cz" },
     { name = "Martin Imrisek"},
