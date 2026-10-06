@@ -104,6 +104,8 @@ autodoc_default_options = {
     'ignore-module-all' : True,
     }
 autodoc_member_order = 'bysource'
+# constructor parameters are documented in __init__ docstrings (see CONTRIBUTING.md)
+autoclass_content = 'both'
 # Optional solver backends (see pyproject.toml extras); mocked so their modules
 # can be documented even when these packages aren't installed in the doc build env.
 autodoc_mock_imports = ['jax', 'optax', 'sksparse', 'cvxpy']

@@ -5,12 +5,13 @@ Changes
 -------
  - Completely changed package structure to be more descriptive and to limit depth of submodules
  - reworked inversion class structure around solver and regularised-solver hierarchies with selector-based regularisation and engine-based linear algebra backends
+ - Handling of weights for negative nodes in MFR regularisation update is now relative to maximum in previous iteration
  - reworked format of line of sights, updated gmat computation functions
  - line of sight saving to a single json file
- - new function for calculation of anisotropic derivative matrix
 
 New Features
 ------------
+ - new function for calculation of anisotropic derivative matrix
  - tutorial for checking anisotropic derivative matrix
  - tests for line of sight saving and loading
  - tests for derivative matrix computation
