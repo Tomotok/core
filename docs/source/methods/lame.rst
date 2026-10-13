@@ -31,7 +31,7 @@ where :math:`\mathbf{u}_{i}` and :math:`\tilde{\mathbf{v}}_{i}` are the i-th col
 
     k_{i}(\alpha) = \left(1 + \frac{\alpha}{D_{ii}^2} \right)^{-1} \,,
 
-where the diagonal of :math:`\mathbf{D}` holds the (generalised) singular values of the problem. The regularisation parameter has the same meaning as in :eq:`tikhonov`, so its values can be exchanged with :class:`~tomotok.inversions.tikhonov.Tikhonov`. The form of the matrices :math:`\mathbf{U}` and :math:`\tilde{\mathbf{V}}` is determined by the decomposition method.
+The diagonal of :math:`\mathbf{D}` holds the (generalised) singular values of the problem. The regularisation parameter has the same meaning as in :eq:`tikhonov`, so its values can be exchanged with :class:`~tomotok.inversions.tikhonov.Tikhonov`. The form of the matrices :math:`\mathbf{U}` and :math:`\tilde{\mathbf{V}}` is determined by the decomposition method.
 
 Since the components are sorted by decreasing :math:`D_{ii}`, the series can be truncated to use only the most significant components, which further increases the speed at the expense of accuracy. Notice also that the solution can be quickly recomputed for different values of the regularisation parameter, which can speed up more complex searching schemes such as the :ref:`Pearson test <pearson>`.
 

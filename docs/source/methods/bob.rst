@@ -92,10 +92,10 @@ Thresholding is a method for noise suppression in the reconstruction. It is base
 The method compares the sizes of the normalised coefficients :math:`a_i = |\tilde{\mathbf{b}}_i \cdot \mathbf{f}| / \|\tilde{\mathbf{b}}_i\|` and removes contributions of adjoint vectors below a threshold. Since the level of noise is not known, the threshold is determined iteratively for each image as a multiple of the root mean square of the coefficients considered to be noise
 
 .. math::
-    \Theta_{n+1}^2 = \frac{c^2}{N^n} \sum_{i \in S^n} a_i^2 \,, \qquad
-    S^n = \left\{ i \mid a_i \leq \Theta_n \right\} \,,
+    \left( \Theta^{n+1} \right)^2 = \frac{c^2}{N^n} \sum_{i \in S^n} a_i^2 \,, \qquad
+    S^n = \left\{ i \mid a_i \leq \Theta^n \right\} \,,
 
-where :math:`c` is the noise suppression parameter and :math:`N^n` is the number of coefficients in the set :math:`S^n`. In the first iteration all coefficients are used. The iteration stops when the threshold converges. The coefficients with :math:`a_i < \Theta` are then set to zero and the remaining ones are transformed to the elementary basis.
+where :math:`c` is the noise suppression parameter and :math:`N^n` is the number of coefficients in the set :math:`S^n`. The iteration starts with :math:`\Theta^0 = \infty`, i.e. all coefficients are used, and stops when the threshold converges. The coefficients with :math:`a_i < \Theta` are then set to zero and the remaining ones are transformed to the elementary basis.
 
 .. figure:: figures/bob_thresholding.png
     :width: 100%

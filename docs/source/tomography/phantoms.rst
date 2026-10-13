@@ -23,6 +23,7 @@ A peak phantom can be created with :func:`~tomotok.tools.phantoms.gaussian_on_fl
     grid = RegularGrid(40, 60, (0.3, 0.7), (-0.3, 0.3))
     r, z = grid.center_mesh
     distance = np.hypot(r - 0.5, z - 0.1)  # peak centred at R = 0.5, z = 0.1
+    # width is 2 * sigma**2, i.e. sigma is about 2.2 cm, the peak is cut off at 5 cm from its centre
     phantom = gaussian_on_flux(distance, width=1e-3, limit=0.05, limit_width=0.02)
     signals = gmat @ phantom.flatten()  # gmat computed for the same grid
 

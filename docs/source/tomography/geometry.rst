@@ -15,9 +15,9 @@ The approximation has some requirements and limitations:
 
 - The observed emissivity should not change significantly in the direction perpendicular to the line of sight within the volume observed by each detector [G2]_.
 - Differences in the geometry of detector apertures cannot be distinguished, i.e. the result is the same regardless of pinhole or collimator size.
-- The geometry matrix has units of length. A compensation by étendue, approximated e.g. by the product of the detector area and the solid angle of its view, is necessary if signals in Watts are to be used.
+- The geometry matrix has units of length. A compensation by étendue :math:`E`, approximated e.g. by the product of the detector area and the solid angle of its view, is necessary if signals in Watts are to be used. For an isotropically emitting plasma with emissivity in W m\ :sup:`-3`, the geometry matrix has to be multiplied by :math:`E / 4\pi`.
 
-In Tomotok, this approach is implemented by :func:`~tomotok.geometry.generators.sparse_line`. Each line of sight is divided into short segments of length ``step`` and the length of the segments in each node is accumulated. A central column blocking the view can be taken into account using the ``rmin`` parameter. The étendue compensation is not included and has to be applied to the signals or to the geometry matrix by the user.
+In Tomotok, this approach is implemented by :func:`~tomotok.geometry.generators.sparse_line`. Each line of sight is divided into short segments of length ``step`` (1 mm by default) and the length of the segments in each node is accumulated. A central column blocking the view can be taken into account using the ``rmin`` parameter (by default 0, i.e. no central column), in which case each line of sight is stopped at its first intersection with the cylinder of radius ``rmin``. The étendue compensation is not included and has to be applied to the signals or to the geometry matrix by the user.
 
 Artificial lines of sight of pinhole cameras, e.g. for testing of detector layouts, can be created by :func:`~tomotok.geometry.sightlines.generate_sightlines`, and geometry matrices can be saved and loaded together with the grid using the functions in :mod:`tomotok.geometry.io`.
 
