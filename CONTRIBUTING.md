@@ -41,6 +41,21 @@ them (e.g. `docs/source/methods/figures/make_bob_figures.py`). When a change of 
 rerun the corresponding script and commit the updated figures. `tests/test_docs_figures.py` runs the scripts
 on a small configuration to check that they work with the current code.
 
+## Copyright and licence notices
+
+- New source files start with the licence header using the current year:
+
+  ```python
+  # Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences.
+  # Licensed under the EUPL-1.2 or later.
+  ```
+
+  Headers of existing files keep the year of their creation.
+- In the first change of each new year, update the end year of the copyright notice in `docs/source/conf.py`
+  (e.g. `2021–2026` to `2021–2027`).
+- When a new author or contributor joins, add them to `AUTHORS.txt`, to the contributors tables in `README.md`
+  and `docs/source/welcome.rst`, to the `authors` of `CITATION.cff` and to `author` in `docs/source/conf.py`.
+
 ## Commit message rules
 
 - Start with a verb in imperative form
