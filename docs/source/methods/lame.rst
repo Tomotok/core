@@ -1,9 +1,9 @@
 Linear Algebraic Methods
 ========================
 
-The linear algebraic methods (LAME) were investigated and improved as a high-speed alternative to the MFR algorithm for the soft X-ray detectors at ASDEX Upgrade [L1]_. However, they had already been described earlier, for example in [L3]_.
+The linear algebraic methods (LAME) were investigated and improved as a high-speed alternative to the MFR algorithm for the soft X-ray :term:`detectors <detector>` at ASDEX Upgrade [L1]_. However, they had already been described earlier, for example in [L3]_.
 
-The name combines the two main features of these methods. The first is the use of a linear regularisation matrix and the second is the use of algebraic decomposition techniques for solving the tomography problem. The decomposition can also be combined with nonlinear regularisation and the iterative approach of :doc:`mfr`. Although the decomposition then has to be recomputed in each MFR iteration, as the regularisation matrix changes, the regularisation parameter search within each iteration requires only matrix multiplications, which speeds up the inner loop.
+The name combines the two main features of these methods. The first is the use of a linear :term:`regularisation matrix` and the second is the use of algebraic decomposition techniques for solving the tomography problem. The decomposition can also be combined with nonlinear regularisation and the iterative approach of :doc:`mfr`. Although the decomposition then has to be recomputed in each MFR iteration, as the regularisation matrix changes, the :term:`regularisation parameter` search within each iteration requires only matrix multiplications, which speeds up the inner loop.
 
 A linear regularisation matrix does not depend on an intermediate solution, which is a simplification compared to the nonlinear regularisation :eq:`mfr_regularisation` used by MFR. This renders the iterative approach unnecessary and the solution can be obtained in a single step. The regularisation matrix consists of discretised derivative matrices :math:`\mathbf{B}_{i}` that can be weighted by coefficients :math:`c_i` to introduce anisotropy
 
@@ -12,7 +12,7 @@ A linear regularisation matrix does not depend on an intermediate solution, whic
 
 where the coefficients are normalised so that :math:`\sum_i c_i = 1` when the matrix is constructed by :func:`~tomotok.regularisations.matrices.weighted_squares`. Various numerical schemes can be used for the derivative matrices and combined in the regularisation matrix.
 
-The decomposition serves mainly for solving the inversion problem. Additionally, the regularisation parameter can be estimated from the properties of the decomposed matrices. The main advantage of this approach is that the decomposition has to be computed only once for a given geometry and regularisation matrix. The inversion of individual time slices, or with different values of the regularisation parameter, then requires only matrix multiplications.
+The decomposition serves mainly for solving the inversion problem. Additionally, the regularisation parameter can be estimated from the properties of the decomposed matrices. The main advantage of this approach is that the decomposition has to be computed only once for a given geometry and regularisation matrix. The inversion of individual :term:`time slices <time slice>`, or with different values of the regularisation parameter, then requires only matrix multiplications.
 
 Series expansion
 ----------------
@@ -45,7 +45,7 @@ This method is based on [L1]_. As the name suggests, it uses singular value deco
 .. math::
     \mathbf{H} = \mathbf{L} \cdot \mathbf{L}^T \,.
 
-The obtained lower triangular matrix :math:`\mathbf{L}` is used together with the geometry matrix to define the matrix
+The obtained lower triangular matrix :math:`\mathbf{L}` is used together with the :term:`geometry matrix` to define the matrix
 
 .. math::
     \mathbf{A} = \mathbf{L}^{-1} \cdot \mathbf{T}^T \,,
@@ -88,7 +88,7 @@ where the exponents of the diagonal matrices are applied element-wise. Substitut
 .. math::
     \mathbf{g}(\alpha) = \sum_{i=1}^{K} \frac{\tilde{\mathbf{v}}_i \cdot \mathbf{T}^T \cdot \mathbf{f}}{\Lambda_{ii} + \alpha} \tilde{\mathbf{v}}_i \,.
 
-As with the SVD method, which requires the Cholesky decomposition of :math:`\mathbf{H}`, the regularisation matrix must be positive definite. With the default ``compensate_edges=True``, every row of the derivative matrices sums to zero, so a constant emissivity is not penalised and :math:`\mathbf{H}` is singular, with the constant vector as its null space (see :doc:`../tomography/regularisation`). This does not affect :class:`~tomotok.inversions.tikhonov.Tikhonov`, where the data term penalises the constant, but the algebraic methods require :math:`\mathbf{H}` itself to be positive definite. A small multiple of the identity matrix should therefore be added to :math:`\mathbf{H}`, or ``compensate_edges=False`` used. :class:`~tomotok.inversions.lame.GevAlgebraic` does not detect a singular :math:`\mathbf{H}` and returns an incorrect result.
+As with the SVD method, which requires the Cholesky decomposition of :math:`\mathbf{H}`, the regularisation matrix must be positive definite. With the default ``compensate_edges=True``, every row of the derivative matrices sums to zero, so a constant :term:`emissivity` is not penalised and :math:`\mathbf{H}` is singular, with the constant vector as its null space (see :doc:`../tomography/regularisation`). This does not affect :class:`~tomotok.inversions.tikhonov.Tikhonov`, where the data term penalises the constant, but the algebraic methods require :math:`\mathbf{H}` itself to be positive definite. A small multiple of the identity matrix should therefore be added to :math:`\mathbf{H}`, or ``compensate_edges=False`` used. :class:`~tomotok.inversions.lame.GevAlgebraic` does not detect a singular :math:`\mathbf{H}` and returns an incorrect result.
 
 Implementation
 --------------
@@ -96,7 +96,7 @@ Implementation
 The structure of the classes is based on the algorithms proposed by T. Odstrcil in [L1]_. A base class :class:`~tomotok.inversions.lame.Algebraic` implements the series expansion :eq:`series` in its ``invert`` method, while subclasses implement the ``decompose`` method. Unlike other :class:`~tomotok.inversions.base.RegularisedInversion` subclasses, algebraic methods do not use a :class:`~tomotok.inversions.solvers.base.Solver`. In the current implementation, the decomposition is recomputed on every call, since the inputs are normalised by the errors of the given time slice. Within a call, different values of the regularisation parameter are evaluated without recomputing the decomposition, which speeds up the search for the regularisation parameter compared to :class:`~tomotok.inversions.tikhonov.Tikhonov`. The ``num`` parameter limits the number of components :math:`K` used in the series expansion, and it can be changed for a single evaluation by the ``num`` argument of ``invert``. :class:`~tomotok.inversions.lame.SvdAlgebraic` always computes all components and ``num`` only truncates the series, while :class:`~tomotok.inversions.lame.GevAlgebraic` computes only the :math:`K` largest eigenvalues, see below.
 
 - :class:`~tomotok.inversions.lame.SvdAlgebraic` implements the SVD method. It works with dense matrices; sparse inputs are converted to dense format.
-- :class:`~tomotok.inversions.lame.GevAlgebraic` implements the GEV method using the sparse eigenvalue solver :func:`scipy.sparse.linalg.eigsh`. Only :math:`K` largest eigenvalues are computed (:math:`N_\mathrm{c}` by default), which makes it suitable for large grids. If the requested number of components is not smaller than :math:`N_\mathrm{n}`, the dense solver :func:`scipy.linalg.eigh` is used instead. Components with numerically zero eigenvalues, which occur for a rank-deficient geometry matrix, are discarded.
+- :class:`~tomotok.inversions.lame.GevAlgebraic` implements the GEV method using the sparse eigenvalue solver :func:`scipy.sparse.linalg.eigsh`. Only :math:`K` largest eigenvalues are computed (:math:`N_\mathrm{c}` by default), which makes it suitable for large :term:`grids <grid>`. If the requested number of components is not smaller than :math:`N_\mathrm{n}`, the dense solver :func:`scipy.linalg.eigh` is used instead. Components with numerically zero eigenvalues, which occur for a rank-deficient geometry matrix, are discarded.
 
 .. note::
 
