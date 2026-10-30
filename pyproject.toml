@@ -51,7 +51,7 @@ docs = [
 [project.urls]
 Homepage = "https://github.com/tomotok/core"
 
-[setuptools.dynamic]
+[tool.setuptools.dynamic]
 version = { file = "tomotok/VERSION" }
 
 [tool.setuptools.packages.find]
