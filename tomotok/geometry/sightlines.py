@@ -22,10 +22,10 @@ def generate_sightlines(
 
     Parameters
     ----------
-    num : int or (int,int), optional
-        number of generated chords (vertical, horizontal)
     pinhole : tuple of three floats, optional
         cartesian coordinates of pinhole
+    num : int or (int,int), optional
+        number of generated chords (vertical, horizontal)
     fov : float, or tuple of two float, optional
         vertical and horizontal field of view in degrees
     axis : tuple of three floats, optional
