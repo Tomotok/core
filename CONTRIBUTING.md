@@ -29,12 +29,17 @@ Recommended for bug fixes and features:
 
 ## Documentation build
 
-Regenerate API pages and HTML docs when public API or doc pages change.
+Build the HTML docs with:
 
 ```bash
-./dev/apidoc.sh
 ./dev/docs_html.sh
 ```
+
+The API reference in `docs/source/api` is curated by hand: each page lists the public objects of one subpackage
+in `autosummary` directives, grouped by their role, and the pages of individual objects are generated during the build
+into `docs/source/api/generated` (not tracked by git). When adding a public class or function, add it to the
+corresponding page. `tests/test_docs_api.py` checks that every name exported in `__all__` of the subpackages
+is listed there.
 
 Figures in the documentation are not generated during the build. They are created by scripts stored next to
 them (e.g. `docs/source/methods/figures/make_bob_figures.py`). When a change of the code affects a figure,

@@ -7,7 +7,7 @@ Tomotok implements three types of inversion methods in :mod:`tomotok.inversions`
 - :doc:`lame` (LAME) solve the same scheme with a linear regularisation matrix using an algebraic decomposition, which allows fast inversion for multiple values of the :term:`regularisation parameter`.
 - :doc:`bob` (BoB) is an unregularised method for over-determined problems, e.g. matrix :term:`cameras <camera>`, which obtains the result by a simple matrix multiplication.
 
-The Phillips-Tikhonov scheme with a given regularisation matrix is also implemented directly by :class:`~tomotok.inversions.tikhonov.Tikhonov`, see :doc:`../tomography/regularisation`.
+The Phillips-Tikhonov scheme with a given regularisation matrix is also implemented directly by :class:`~tomotok.inversions.Tikhonov`, see :doc:`../tomography/regularisation`.
 
 .. toctree::
     :maxdepth: 1

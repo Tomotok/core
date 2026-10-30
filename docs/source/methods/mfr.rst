@@ -34,9 +34,9 @@ Having constructed the regularisation matrix, the last unknown in :eq:`tikhonov`
 Implementation
 --------------
 
-The algorithm is implemented in :class:`~tomotok.inversions.mfr.MinimumFisherRegularisation`. It wraps a :class:`~tomotok.inversions.base.RegularisedInversion` (usually :class:`~tomotok.inversions.tikhonov.Tikhonov`) that performs the inner loop, i.e. determines the regularisation parameter using its regularisation selector and solves :eq:`tikhonov`. A list of inversions, one for each outer iteration, can be provided instead, e.g. to use a :class:`~tomotok.inversions.base.FixedSelector` with a different value of :math:`\alpha` in each iteration and skip the inner loop optimisation. The length of the list has to be equal to ``mfi_num_max``. The outer loop is terminated after ``mfi_num_max`` iterations.
+The algorithm is implemented in :class:`~tomotok.inversions.MinimumFisherRegularisation`. It wraps a :class:`~tomotok.inversions.base.RegularisedInversion` (usually :class:`~tomotok.inversions.Tikhonov`) that performs the inner loop, i.e. determines the regularisation parameter using its regularisation selector and solves :eq:`tikhonov`. A list of inversions, one for each outer iteration, can be provided instead, e.g. to use a :class:`~tomotok.inversions.FixedSelector` with a different value of :math:`\alpha` in each iteration and skip the inner loop optimisation. The length of the list has to be equal to ``mfi_num_max``. The outer loop is terminated after ``mfi_num_max`` iterations.
 
-The regularisation matrix :eq:`mfr_regularisation` is constructed from the list of derivative matrices and anisotropy coefficients passed to the call using :func:`~tomotok.regularisations.matrices.weighted_squares`. Instead of a fixed value :math:`w_\mathrm{max}`, the previous solution is clipped from below at ``weight_floor`` (:math:`\varepsilon`) times its maximum before computing the weights
+The regularisation matrix :eq:`mfr_regularisation` is constructed from the list of derivative matrices and anisotropy coefficients passed to the call using :func:`~tomotok.regularisations.weighted_squares`. Instead of a fixed value :math:`w_\mathrm{max}`, the previous solution is clipped from below at ``weight_floor`` (:math:`\varepsilon`) times its maximum before computing the weights
 
 .. math::
 

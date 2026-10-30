@@ -184,8 +184,8 @@ def derivative_matrix(
     See Also
     --------
     all_direction_derivative_matrices : creates derivative matrices for all 8 directions
-    reduce_matrix : reduces matrix by cutting out rows and columns representing unwanted nodes
-    compensate_matrix : subtracts from diagonal so that sum of each row is zero or nearly zero
+    derivatives.reduce_matrix : reduces matrix by cutting out rows and columns representing unwanted nodes
+    derivatives.compensate_matrix : subtracts from diagonal so that sum of each row is zero or nearly zero
     """
     kw_diags = {'format': 'csc', 'shape': (grid.size, grid.size)}
     value_diags = [1.0]
@@ -356,8 +356,8 @@ def anisotropic_derivative_matrix(
     See Also
     --------
     standard_anisotropic_derivative_matrices : creates derivative matrices for parallel and perpendicular directions
-    reduce_matrix : reduces matrix by cutting out rows and columns representing unwanted nodes
-    compensate_matrix : subtracts from diagonal so that sum of each row is zero or nearly zero
+    derivatives.reduce_matrix : reduces matrix by cutting out rows and columns representing unwanted nodes
+    derivatives.compensate_matrix : subtracts from diagonal so that sum of each row is zero or nearly zero
     """
     if grid.shape != flux.shape:
         raise ValueError('Grid shape does not match fluxes shape.')

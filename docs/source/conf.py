@@ -45,13 +45,12 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
-    # 'sphinx.ext.napoleon',
     'numpydoc',
-    # 'sphinx_markdown_builder',
+    'sphinx.ext.autosummary',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = []
+templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -100,10 +99,10 @@ exclude_patterns = []
 autodoc_default_options = {
     'members' : True,
     'special-members' : '__call__',
-    # document only objects defined in a module, so objects re-exported by packages are not documented twice
-    'ignore-module-all' : True,
     }
 autodoc_member_order = 'bysource'
+# API reference pages in docs/source/api list the documented objects, stub pages are generated
+autosummary_generate = True
 # constructor parameters are documented in __init__ docstrings (see CONTRIBUTING.md)
 autoclass_content = 'both'
 # Optional solver backends (see pyproject.toml extras); mocked so their modules

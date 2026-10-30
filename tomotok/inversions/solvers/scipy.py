@@ -43,7 +43,7 @@ class NNLSSolver(Solver):
     Solves linear systems using the non-negative least squares method from SciPy.
 
     Finds the non-negative solution minimising the residual of the linear system.
-    When used by :class:`~tomotok.inversions.tikhonov.Tikhonov`, it is applied to the regularised normal equations,
+    When used by :class:`~tomotok.inversions.Tikhonov`, it is applied to the regularised normal equations,
     so the result is the non-negative least squares solution of that system, which in general differs from
     the minimum of the Tikhonov functional constrained to non-negative values.
     Implementation based on dense matrices, sparse inputs are converted to dense arrays.

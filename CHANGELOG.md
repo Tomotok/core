@@ -8,6 +8,9 @@ Changes
  - Handling of weights for negative nodes in MFR regularisation update is now relative to maximum in previous iteration
  - reworked format of line of sights, updated gmat computation functions
  - line of sight saving to a single json file
+ - restructured documentation, general theoretical background and inversion methods are described in separate chapters, added quick start guide and extended glossary
+ - API reference is curated using autosummary and documents objects at their public import paths, addresses of API pages changed
+ - licence specified as EUPL-1.2 or later in package metadata
 
 New Features
 ------------
@@ -18,6 +21,8 @@ New Features
  - add github workflow for testing code on multiple python versions
  - read-only `adjoint_basis` property of `Bob`
  - `square` keyword of `FastSelector`
+ - citation metadata in CITATION.cff
+ - tests checking that the public API is listed in the documentation and that the scripts generating documentation figures run
 
 Fixes
 -----
@@ -25,6 +30,7 @@ Fixes
  - Algebraic.invert no longer fails when data array is passed
  - GevAlgebraic now reproduces the Phillips-Tikhonov solution, decomposition stores generalised singular values instead of their squares
  - GevAlgebraic no longer fails when the number of channels is not smaller than the number of nodes and discards numerically zero eigenvalues instead of producing NaN for rank-deficient geometry matrix
+ - corrected and completed docstrings, constructor parameters are shown in the documentation
 
 Version 1.3.1 (03.01.2024)
 ==========================

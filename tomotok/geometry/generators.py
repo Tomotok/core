@@ -26,7 +26,7 @@ def sparse_line_3d(
     Optimized version working with sparse matrices.
 
     .. deprecated:: 2.0
-        Use :func:`sparse_line` instead.
+        Use :func:`~tomotok.geometry.sparse_line` instead.
 
     Parameters
     ----------
@@ -48,7 +48,7 @@ def sparse_line_3d(
 
     See Also
     --------
-    sparse_line
+    tomotok.geometry.sparse_line
     """
     warnings.warn(
         'Function `sparse_line_3d` is deprecated and will be removed in a future version. ' +
@@ -100,7 +100,7 @@ def calcam_sparse_line_3d(
     Assumes that pupil and dirs coordinates are (x, y, z) = (horizontal, horizontal, vertical)
 
     .. deprecated:: 2.0
-        Use :func:`calcam_sparse_line` instead.
+        Use :func:`~tomotok.geometry.calcam_sparse_line` instead.
 
     Parameters
     ----------
@@ -123,7 +123,7 @@ def calcam_sparse_line_3d(
 
     See Also
     --------
-    calcam_sparse_line
+    tomotok.geometry.calcam_sparse_line
     """
     warnings.warn(
         'Function `calcam_sparse_line_3d` is deprecated and will be removed in a future version. ' +

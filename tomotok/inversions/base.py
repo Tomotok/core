@@ -68,10 +68,10 @@ class RegularisedInversion(Inversion):
         Parameters
         ----------
         solver : Solver or None, optional
-            The solver used for solving the inversion problem. If ``None`` (default), a new :class:`~tomotok.inversions.solvers.scipy.CholeskySolver` instance is created and used for this inversion instance.
+            The solver used for solving the inversion problem. If ``None`` (default), a new :class:`~tomotok.inversions.solvers.CholeskySolver` instance is created and used for this inversion instance.
         regularisation_selector : RegularisationSelector or None, optional
             Strategy object used to determine the regularisation parameter.
-            If ``None`` (default), a new :class:`~tomotok.inversions.base.PearsonSelector` instance is created
+            If ``None`` (default), a new :class:`~tomotok.inversions.PearsonSelector` instance is created
             and used for this inversion instance.
         """
         solver = solver or CholeskySolver()

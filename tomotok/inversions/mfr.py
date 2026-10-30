@@ -40,7 +40,7 @@ class MinimumFisherRegularisation:
         ----------
         inversion : RegularisedInversion or list of RegularisedInversion
             inversion used in the inner loop, i.e. for determination of the regularisation parameter and solution
-            of the regularised problem, usually :class:`~tomotok.inversions.tikhonov.Tikhonov`,
+            of the regularised problem, usually :class:`~tomotok.inversions.Tikhonov`,
             if a single inversion is provided, it is used for all MFI iterations, otherwise
             each inversion is used for the corresponding MFI iteration and their number must be equal to `mfi_num_max`
         termination_method : str, optional

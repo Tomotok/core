@@ -22,10 +22,10 @@ Tomotok is a framework for the tomographic inversion of fusion plasmas, focusing
    :maxdepth: 1
    :caption: API reference
 
-   api/tomotok.geometry
-   api/tomotok.inversions
-   api/tomotok.regularisations
-   api/tomotok.tools
+   api/geometry
+   api/regularisations
+   api/inversions
+   api/tools
 
 Indices and tables
 ------------------
