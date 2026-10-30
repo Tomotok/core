@@ -68,10 +68,10 @@ class RegularisedInversion(Inversion):
         Parameters
         ----------
         solver : Solver or None, optional
-            The solver used for solving the inversion problem. If ``None`` (default), a new :class:`CholeskySolver` instance is created and used for this inversion instance.
+            The solver used for solving the inversion problem. If ``None`` (default), a new :class:`~tomotok.inversions.solvers.CholeskySolver` instance is created and used for this inversion instance.
         regularisation_selector : RegularisationSelector or None, optional
             Strategy object used to determine the regularisation parameter.
-            If ``None`` (default), a new :class:`PearsonSelector` instance is created
+            If ``None`` (default), a new :class:`~tomotok.inversions.PearsonSelector` instance is created
             and used for this inversion instance.
         """
         solver = solver or CholeskySolver()
@@ -150,7 +150,7 @@ class RegularisedInversion(Inversion):
         return out, stats
 
     def invert(self, alpha: float) -> np.ndarray:
-        """Inverts the regularised problem using provided regularisation parameter.
+        """Invert the regularised problem using provided regularisation parameter.
 
         Uses the standard inputs to produce the regularised problem and then uses the solve method to find the solution.
 
@@ -167,7 +167,7 @@ class RegularisedInversion(Inversion):
         raise NotImplementedError("This method should be defined by subclasses.")
 
     def determine_regularisation(self, *args: Any, **kwargs: Any) -> tuple[float, dict[str, Any]]:
-        """Determines the value of the regularisation parameter to be used in the inversion.
+        """Determine the value of the regularisation parameter to be used in the inversion.
 
         Parameters
         ----------
@@ -241,12 +241,12 @@ class PearsonSelector(RegularisationSelector):
 
         Inverses signals using given regularisation parameter and computes chi2 test
 
-        Stores pearson test result in attribute last_chi.
+        Keeps track of the value closest to the ideal Pearson test result.
 
         Parameters
         ----------
         logalpha : float
-            natural logarithm of regularisation parameter
+            decadic logarithm of regularisation parameter
 
         Returns
         -------
@@ -265,7 +265,7 @@ class PearsonSelector(RegularisationSelector):
 
     def determine(self, inversion: RegularisedInversion) -> tuple[float, dict[str, Any]]:
         """
-        Determines value of regularisation parameter using minimisation of Pearson test.
+        Determine value of regularisation parameter using minimisation of Pearson test.
         
         The minimisation is done using the `minimize_scalar` function from `scipy.optimize`.
 
@@ -324,7 +324,7 @@ class FixedSelector(RegularisationSelector):
         self._value = value
 
     def determine(self, inversion: RegularisedInversion | None = None) -> tuple[float, dict[str, Any]]:
-        """Determines value of regularisation parameter using the fixed value.
+        """Determine value of regularisation parameter using the fixed value.
 
         Returns
         -------

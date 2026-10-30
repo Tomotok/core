@@ -1,3 +1,5 @@
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences.
+# Licensed under the EUPL-1.2 or later.
 from numpy import ndarray
 from numpy.typing import ArrayLike
 from scipy.sparse import sparray
@@ -10,7 +12,7 @@ class Solver:
 
     def solve(self, a: ArrayLike | sparray, b: ArrayLike | sparray) -> ndarray:
         r"""
-        Solves the linear system :math:`\mathbf{Ax}=\mathbf{b}`.
+        Solve the linear system :math:`\mathbf{Ax}=\mathbf{b}`.
 
         Parameters
         ----------

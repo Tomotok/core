@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+message: >-
+  If you use Tomotok in a scientific publication, please cite the article below
+  together with the references for the inversion methods used.
+title: Tomotok
+abstract: >-
+  Python package for tomographic inversion of tokamak plasma radiation,
+  focusing on inversion methods based on discretisation.
+type: software
+authors:
+  - given-names: Jakub
+    family-names: Svoboda
+  - given-names: Jordan
+    family-names: Cavalier
+  - given-names: Ondřej
+    family-names: Ficker
+  - given-names: Martin
+    family-names: Imríšek
+  - given-names: Jan
+    family-names: Mlynář
+repository-code: https://github.com/Tomotok/core
+url: https://tomotok.github.io/core/
+# Tomotok is licensed under EUPL-1.2 or later, CFF only accepts plain SPDX identifiers
+license: EUPL-1.2
+keywords:
+  - tomography
+  - tokamak
+  - plasma radiation
+  - inversion methods
+preferred-citation:
+  type: article
+  authors:
+    - given-names: Jakub
+      family-names: Svoboda
+    - given-names: Jordan
+      family-names: Cavalier
+    - given-names: Ondřej
+      family-names: Ficker
+    - given-names: Martin
+      family-names: Imríšek
+    - given-names: Jan
+      family-names: Mlynář
+    - given-names: Martin
+      family-names: Hron
+  title: "Tomotok: python package for tomography of tokamak plasma radiation"
+  journal: Journal of Instrumentation
+  volume: 16
+  issue: 12
+  start: C12015
+  year: 2021
+  doi: 10.1088/1748-0221/16/12/C12015

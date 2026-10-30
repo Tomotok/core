@@ -36,7 +36,7 @@ class Magnetics:
         unique: bool = False,
     ) -> 'Magnetics':
         """
-        Interpolates given magnetic field to provided grid using rectangular bivariate spline.
+        Interpolate given magnetic field to provided grid using rectangular bivariate spline.
 
         If `tvec` is provided, only given time slices are interpolated.
         If `unique` is set to True, only unique time slices specified in `tvec` are interpolated.
@@ -107,7 +107,7 @@ class Sightlines:
 
     def coords_r(self, number: int = 3) -> np.ndarray:
         """
-        Returns given number of radial coordinates along the sight lines.
+        Return given number of radial coordinates along the sight lines.
 
         Parameters        
         ----------
@@ -127,7 +127,7 @@ class Sightlines:
 
     def coords_z(self, number: int = 3) -> np.ndarray:
         """
-        Returns given number of vertical coordinates along the sight lines.
+        Return given number of vertical coordinates along the sight lines.
 
         Parameters        
         ----------
@@ -141,7 +141,7 @@ class Sightlines:
 
     def cylindrical_coords(self, number: int = 3) -> tuple[np.ndarray, np.ndarray]:
         """
-        Returns given number of cylindrical coordinates along the sight lines.
+        Return given number of cylindrical coordinates along the sight lines.
 
         Parameters        
         ----------

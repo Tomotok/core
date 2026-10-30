@@ -5,24 +5,16 @@ from numpy.typing import ArrayLike
 from tomotok.tools.containers import Signals
 
 
-class Diagnostic(object):
+class Diagnostic:
     """
     Base class for diagnostics. Should be subclassed for specific diagnostics.
     """
     def __init__(self):
-        """
-        Parameters
-        ----------
-        shot : int, optional
-            Shot number for which the diagnostic instance is created. It is used as default.
-        kwargs : dict
-            Additional keyword arguments for subclass
-        """
         return
 
     def load_data(self, shot: int, tvec: ArrayLike | None = None) -> Signals:
         """
-        Loads diagnostic data from database specified by `source`.
+        Load diagnostic data from a database. Specific implementation should be provided in subclass.
 
         Parameters
         ----------
@@ -30,8 +22,6 @@ class Diagnostic(object):
             Shot number for which the diagnostic data is loaded.
         tvec : ArrayLike, optional
             specifies timeslices to be loaded, if not provided, all available timeslices are loaded
-        source : str, optional
-            specifies source for loading diagnostic data
 
         Returns
         -------

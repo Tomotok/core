@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tomotok"
 dynamic = ["version"]
-description = "Collection of algorithms used for tokamak plasma tomography"
+description = "Tomographic inversion of tokamak plasma radiation, focusing on inversion methods based on discretisation"
 readme = "README.md"
-license = "EUPL-1.2"
+license = "EUPL-1.2+"
 authors = [
     { name = "Jakub Svoboda", email = "svoboda@ipp.cas.cz" },
     { name = "Martin Imrisek"},
@@ -51,7 +51,7 @@ docs = [
 [project.urls]
 Homepage = "https://github.com/tomotok/core"
 
-[setuptools.dynamic]
+[tool.setuptools.dynamic]
 version = { file = "tomotok/VERSION" }
 
 [tool.setuptools.packages.find]

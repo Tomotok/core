@@ -18,20 +18,20 @@ def generate_sightlines(
     length: float = 1.
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Creates sightlines starting at pinhole and ending at points with uniform distribution over a given field of view.
+    Create sightlines starting at pinhole and ending at points with uniform distribution over a given field of view.
 
     Parameters
     ----------
-    num : int or (int,int), optional
-        number of generated chords (vertical, horizontal)
     pinhole : tuple of three floats, optional
         cartesian coordinates of pinhole
+    num : int or (int,int), optional
+        number of generated chords (vertical, horizontal)
     fov : float, or tuple of two float, optional
         vertical and horizontal field of view in degrees
     axis : tuple of three floats, optional
         direction of symmetry axis from pinhole to the center of the field of view
-    elong : float, optional
-        elongation of the sightlines, a multiplier for the length of the direction vectors
+    length : float, optional
+        length of the sightlines' direction vectors
 
     Returns
     -------
@@ -48,7 +48,7 @@ def generate_sightlines(
 
 def generate_los(pinhole=(0, 0, 0), num=(10, 1), fov=(45, 0), axis=(1, 0, 0), length=1.):
     """
-    Creates line of sight endpoints with uniform distribution.
+    Create line of sight endpoints with uniform distribution.
 
     .. deprecated:: 2.0
         Use `generate_sightlines` instead
@@ -67,7 +67,7 @@ def generate_directions(
     length=1.0
 ) -> np.ndarray:
     """
-    Creates direction vectors for lines of sight using camera like convention.
+    Create direction vectors for lines of sight using camera like convention.
 
     The first line of sight is top left, then the numbering follows a row, the last one is bottom right.
 
@@ -127,7 +127,7 @@ def generate_directions(
 
 def rot_v(points: np.typing.ArrayLike, angle: float) -> np.ndarray:
     """
-    Rotates given points in vertical direction, that is about horizontal y axis perpendicular to r/x.
+    Rotate given points in vertical direction, that is about horizontal y axis perpendicular to r/x.
 
     Should be done before horizontal rotation.
 
@@ -154,7 +154,7 @@ def rot_v(points: np.typing.ArrayLike, angle: float) -> np.ndarray:
 
 def rot_h(points: np.typing.ArrayLike, angle: float) -> np.ndarray:
     """
-    Rotates given points in horizontal direction, that is about vertical axis z.
+    Rotate given points in horizontal direction, that is about vertical axis z.
 
     Parameters
     ----------
@@ -184,7 +184,7 @@ def save_los(
         detector_names: str | list[str] = None
 ):
     """
-    Saves line of sight start and end points to json file.
+    Save line of sight start and end points to json file.
 
     Parameters
     ----------
