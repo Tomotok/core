@@ -52,13 +52,13 @@ There are multiple methods for determining the regularisation parameter, see [I1
 
 where :math:`f_i` is the signal measured by the i-th channel and :math:`\sigma_i` is its expected error. The optimal value is considered to be one [M2]_, which means that the misfit of the reconstruction is approximately the same as the estimated error of the measured data.
 
-This test is implemented in :class:`~tomotok.inversions.PearsonSelector`, which is the default regularisation parameter selector. It minimises :math:`|\chi^2 - 1|` using a bounded search algorithm combined with Brent's method (:func:`scipy.optimize.minimize_scalar`) [I3]_ [I4]_. The search is conducted on a logarithmic scale within bounds representing values of :math:`\alpha` that are considered too small or too large, by default :math:`10^{-30} \leq \alpha \leq 10^{10}`. The main disadvantage of this approach is its computational cost, as one inversion of :eq:`tikhonov` is required for each tested value of :math:`\alpha`.
+This test is implemented in :class:`~tomotok.inversions.PearsonSelector`, which is the default regularisation parameter selector. It minimises :math:`|\chi^2 - 1|` using a bounded search algorithm combined with Brent's method (:func:`scipy.optimize.minimize_scalar`) [I2]_ [I3]_. The search is conducted on a logarithmic scale within bounds representing values of :math:`\alpha` that are considered too small or too large, by default :math:`10^{-30} \leq \alpha \leq 10^{10}`. The main disadvantage of this approach is its computational cost, as one inversion of :eq:`tikhonov` is required for each tested value of :math:`\alpha`.
 
 Repeated optimisation can be avoided by using :class:`~tomotok.inversions.FixedSelector` with a regularisation parameter provided by the user. This utilises the fact that optimisation on similar data (e.g. consecutive :term:`time slices <time slice>`) provides similar values of the regularisation parameter. Linear algebraic methods additionally provide a fast estimate based on their decomposition, see :doc:`../methods/lame`.
 
 References
 ----------
 
-.. [I3] G. E. Forsythe, M. A. Malcolm and C. B. Moler, Computer Methods for Mathematical Computations, Prentice-Hall (1977).
+.. [I2] G. E. Forsythe, M. A. Malcolm and C. B. Moler, Computer Methods for Mathematical Computations, Prentice-Hall (1977).
 
-.. [I4] R. P. Brent, Algorithms for Minimization without Derivatives, Prentice-Hall (1973).
+.. [I3] R. P. Brent, Algorithms for Minimization without Derivatives, Prentice-Hall (1973).

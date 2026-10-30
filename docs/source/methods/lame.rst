@@ -98,14 +98,6 @@ The structure of the classes is based on the algorithms proposed by T. Odstrcil 
 - :class:`~tomotok.inversions.SvdAlgebraic` implements the SVD method. It works with dense matrices; sparse inputs are converted to dense format.
 - :class:`~tomotok.inversions.GevAlgebraic` implements the GEV method using the sparse eigenvalue solver :func:`scipy.sparse.linalg.eigsh`. Only :math:`K` largest eigenvalues are computed (:math:`N_\mathrm{c}` by default), which makes it suitable for large :term:`grids <grid>`. If the requested number of components is not smaller than :math:`N_\mathrm{n}`, the dense solver :func:`scipy.linalg.eigh` is used instead. Components with numerically zero eigenvalues, which occur for a rank-deficient geometry matrix, are discarded.
 
-.. note::
-
-    A QR-based method proposed in [L1]_ as a faster alternative to SVD is intentionally not implemented. The SVD can be approximated by the pivoted QLP decomposition [L4]_, i.e. a column-pivoted QR decomposition followed by a QR decomposition of the transposed triangular factor, which yields a small, nearly diagonal triangular matrix whose diagonal approximates :math:`\mathbf{D}`. Benchmarks on synthetic tomography problems showed no benefit over :class:`~tomotok.inversions.SvdAlgebraic`:
-
-    - Neglecting the off-diagonal elements of the triangular matrix leads to errors of the same order as the solution itself.
-    - Additional QR sweeps converge only slowly, e.g. 50 sweeps reached a relative error of about :math:`10^{-3}` while being several times slower than the SVD.
-    - Diagonalising the small triangular matrix exactly by SVD gives the exact solution, but at the same cost as the SVD of the full matrix, since LAPACK already performs an initial QR decomposition for strongly non-square matrices.
-
 The regularisation parameter can be determined by any :class:`~tomotok.inversions.base.RegularisationSelector`. Additionally, :class:`~tomotok.inversions.FastSelector` provides a fast estimate of :math:`\alpha` from the diagonal values of :math:`\mathbf{D}` without any additional inversion. The estimate is computed from all singular values stored by the decomposition, regardless of the truncation of the series. These are all :math:`N_\mathrm{c}` values for :class:`~tomotok.inversions.SvdAlgebraic`, but only the :math:`K` computed values for :class:`~tomotok.inversions.GevAlgebraic`, so the same ``num`` can lead to different estimates for the two methods. Supported estimates are the ``mean``, ``median``, ``quantile`` (the :math:`2/e` quantile, default), ``logmean`` (geometric mean) and ``half`` (half of the maximum value) of the diagonal values. Since the singular values enter the filter factors :eq:`filters` squared, the estimate is squared by default, which can be switched off by the ``square`` parameter.
 
 References
@@ -116,5 +108,3 @@ References
 .. [L2] L.C. Ingesson, "The Mathematics of Some Tomography Algorithms Used at JET," JET Joint Undertaking (2000)
 
 .. [L3] N. Terasaki et al., "Linear algebraic algorithms for high speed and stable reconstruction of plasma image," Fusion Eng. Des. 34 (1997): 801-804.
-
-.. [L4] G.W. Stewart, "The QLP approximation to the singular value decomposition," SIAM J. Sci. Comput., 20(4), 1336-1348 (1999).
