@@ -35,7 +35,7 @@ Solvers
 
 .. currentmodule:: tomotok.inversions.solvers
 
-Solvers of linear systems used by :class:`~tomotok.inversions.Tikhonov` and :class:`~tomotok.inversions.Bob`.
+Solvers of linear systems used by :class:`~tomotok.inversions.Tikhonov` and :class:`~tomotok.inversions.Bob`. :class:`Solver` is the base class of all solvers, the other solvers below are based on SciPy and are named after the numerical method.
 
 .. autosummary::
     :toctree: generated/
@@ -54,7 +54,7 @@ Solvers of linear systems used by :class:`~tomotok.inversions.Tikhonov` and :cla
 
 .. currentmodule:: tomotok.inversions.solvers
 
-Solvers with optional dependencies have to be imported from their submodules, see :doc:`../install`.
+Solvers with optional dependencies are named after their backend (JAX, Optax, scikit-sparse, CVXPY) and the numerical method. They have to be imported from their submodules, see :doc:`../install`.
 
 .. autosummary::
     :toctree: generated/
