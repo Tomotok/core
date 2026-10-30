@@ -171,7 +171,7 @@ class RegularGrid(Grid):
 
     def is_inside(self, r: np.ndarray, z: np.ndarray, method: str = 'center') -> np.ndarray:
         """
-        Selects nodes with centers inside given polygon.
+        Select nodes with centers inside given polygon.
 
         Parameters
         ----------
@@ -197,7 +197,7 @@ class RegularGrid(Grid):
 
     def inside_corners(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
-        Counts how many corners of each node are inside given polygon.
+        Count how many corners of each node are inside given polygon.
 
         Parameters
         ----------
@@ -228,7 +228,7 @@ class RegularGrid(Grid):
     
     def is_inside_any(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
-        Selects nodes with at least one corner inside given polygon.
+        Select nodes with at least one corner inside given polygon.
 
         Parameters
         ----------
@@ -245,7 +245,7 @@ class RegularGrid(Grid):
 
     def is_inside_all(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
-        Selects nodes with all corners inside given polygon.
+        Select nodes with all corners inside given polygon.
 
         Parameters
         ----------
@@ -262,7 +262,7 @@ class RegularGrid(Grid):
 
     def is_inside_center(self, r: np.ndarray, z: np.ndarray) -> np.ndarray:
         """
-        Selects nodes with centers inside given polygon.
+        Select nodes with centers inside given polygon.
 
         Parameters
         ----------
@@ -285,7 +285,7 @@ class RegularGrid(Grid):
 
     def corners(self, mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
-        Creates an array with r, z coordinates of node corners. 
+        Create an array with r, z coordinates of node corners. 
         
         Corners are in clockwise order starting from top left.
 

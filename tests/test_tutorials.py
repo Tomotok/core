@@ -12,11 +12,16 @@ import sys
 import unittest
 from pathlib import Path
 
-TUTORIALS_DIR = Path(__file__).resolve().parents[1] / 'tutorials'
+REPO_ROOT = Path(__file__).resolve().parents[1]
+TUTORIALS_DIR = REPO_ROOT / 'tutorials'
 
 
 def run_tutorial(name, timeout=120):
-    env = dict(os.environ, MPLBACKEND='Agg')
+    # make tomotok importable from the source tree even when it is not installed
+    pythonpath = os.pathsep.join(
+        filter(None, [str(REPO_ROOT), os.environ.get('PYTHONPATH')])
+    )
+    env = dict(os.environ, MPLBACKEND='Agg', PYTHONPATH=pythonpath)
     result = subprocess.run(
         [sys.executable, str(TUTORIALS_DIR / name)],
         cwd=TUTORIALS_DIR,

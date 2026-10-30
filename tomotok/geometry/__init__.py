@@ -1,12 +1,12 @@
 # Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences. 
 # Licensed under the EUPL-1.2 or later.
 """
-Contains functions and classes required for geometry matrix computation using single line of sight approximation.
+Contains functions and classes required for geometry matrix computation using the single line of sight approximation.
 
- - Functions computing contributions of nodes to gmat
- - reconstruction grid definition
- - line of sight generators for artificial diagnostics
- - gmat handler prototype
+ - Reconstruction grid definition (`grids`)
+ - Functions computing contributions of nodes to the geometry matrix (`generators`)
+ - Line of sight generators for artificial diagnostics (`sightlines`)
+ - Saving and loading of geometry matrices together with the grid (`io`)
 """
 from .generators import dense_line, sparse_line, calcam_sparse_line
 from .grids import Grid, RegularGrid

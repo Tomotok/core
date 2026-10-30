@@ -17,21 +17,55 @@ class MinimumFisherRegularisation:
 
     Attributes
     ----------
-    inversion : RegularisedInversion or list of RegularisedInversion
-        the inversion(s) used in the inner loop of Minimum Fisher Regularisation
-        if a single inversion is provided, it will be used for all MFI iterations, otherwise 
-        each inversion is used for the corresponding MFI iteration, the number of inversions must match mfi_num_max
+    inversion_list : list of RegularisedInversion
+        inversions used in the inner loop, one for each MFI iteration
     termination_method : str
-        the method used to terminate the MFI loop, currently only "max_iter" is supported
+        method used to terminate the MFI loop
     mfi_num_max : int
-        the maximum number of MFI loops before the iteration is stopped
+        maximum number of MFI iterations
+    weight_floor : float
+        minimum value of the previous solution relative to its maximum used when computing node weights
     """
+    TERMINATION_METHODS: tuple[str, ...] = ("max_iter",)
+
     def __init__(
-        self, 
+        self,
         inversion: RegularisedInversion | list[RegularisedInversion],
         termination_method: str = "max_iter",
         mfi_num_max: int = 3,
+        weight_floor: float = 1e-6,
     ):
+        """
+        Parameters
+        ----------
+        inversion : RegularisedInversion or list of RegularisedInversion
+            inversion used in the inner loop, i.e. for determination of the regularisation parameter and solution
+            of the regularised problem, usually :class:`~tomotok.inversions.Tikhonov`,
+            if a single inversion is provided, it is used for all MFI iterations, otherwise
+            each inversion is used for the corresponding MFI iteration and their number must be equal to `mfi_num_max`
+        termination_method : str, optional
+            method used to terminate the MFI loop, by default "max_iter", which is currently the only supported method
+            and stops the loop after `mfi_num_max` iterations
+        mfi_num_max : int, optional
+            maximum number of MFI iterations, by default 3
+        weight_floor : float, optional
+            minimum value of the previous solution relative to its maximum used when computing
+            node weights (``1 / g``) for the next MFI iteration, by default 1e-6,
+            prevents near-zero or negative values (e.g. from a non-negativity-constrained solver)
+            from producing unbounded weights and an ill-conditioned regularisation matrix
+
+        Raises
+        ------
+        TypeError
+            if `inversion` is not a RegularisedInversion or a list of them
+        ValueError
+            if the length of the inversion list differs from `mfi_num_max`
+            or if `termination_method` is not supported
+        """
+        if termination_method not in self.TERMINATION_METHODS:
+            msg = f'Unsupported termination method {termination_method!r}.'
+            msg += f' Supported methods are: {", ".join(self.TERMINATION_METHODS)}.'
+            raise ValueError(msg)
         if isinstance(inversion, list):
             if not all(isinstance(s, RegularisedInversion) for s in inversion):
                 msg = 'All elements of the inversion list should be instances of RegularisedInversion.'
@@ -48,6 +82,7 @@ class MinimumFisherRegularisation:
             raise TypeError(msg)
         self.termination_method = termination_method
         self.mfi_num_max = mfi_num_max
+        self.weight_floor = weight_floor
 
     def __call__(
         self, 
@@ -55,7 +90,7 @@ class MinimumFisherRegularisation:
         gmat: np.ndarray | sparse.csc_array | sparse.csr_array, 
         derivatives: list[sparse.csc_array | sparse.csr_array],
         errors: float | np.ndarray,
-        derivative_weights: list[float] | float | None = None,
+        derivative_weights: list[float] | list[np.ndarray] | None = None,
         initial_guess: np.ndarray | None = None,
     ) -> tuple[np.ndarray, list[dict]]:
         """
@@ -63,27 +98,30 @@ class MinimumFisherRegularisation:
 
         Parameters
         ----------
-        data : np.ndarray
-        gmat : scipy.sparse.spmatrix
-        derivatives : list of scipy.sparse.spmatrix
-            list of derivative matrices with shape (#nodes, #nodes)
-        errors : np.ndarray
-            error estimates for the data, used in the weighting of the data misfit term in the inversion
-        derivative_weights : list of floats or list of array-like, optional
-            anisotropy of derivatives used in the constrution of regularisation matrix,
-            by default None, which corresponds to isotropic regularisation (all weights equal to 1)
-        mfi_num_max : int, optional
-            number of minimum Fisher loops before the iteration is stopped, by default 3
-        initial_guess : np.ndarray, optional
-            initial guess for the solution, used in the first MFI loop to compute node weights for regularisation matrix,
-            by default None, which corresponds to a uniform initial guess of 1
+        data : numpy.ndarray
+            measured signals with shape (#channels,)
+        gmat : numpy.ndarray or scipy.sparse.csr_array or scipy.sparse.csc_array
+            geometry matrix with shape (#channels, #nodes)
+        derivatives : list of scipy.sparse.csc_array or scipy.sparse.csr_array
+            derivative matrices with shape (#nodes, #nodes) used to construct the regularisation matrix
+        errors : float or numpy.ndarray
+            expected errors of the measured signals, a single value or an array with the shape of `data`,
+            used for normalisation of the inputs and in the Pearson test
+        derivative_weights : list of float or list of array-like, optional
+            anisotropy coefficients, i.e. weights of the individual derivative matrices, normalised to unit sum,
+            a list of arrays with shape (#nodes,) specifies the weight of each derivative matrix in each node
+            (row of the matrix), the weights are then normalised to unit sum in each node separately,
+            by default None, which corresponds to equal weights of all derivative matrices
+        initial_guess : numpy.ndarray, optional
+            initial estimate of the solution with shape (#nodes,), used to compute node weights in the first MFI iteration,
+            by default None, which corresponds to equal node weights, i.e. linear regularisation in the first iteration
 
         Returns
         -------
-        np.ndarray
-            inversion result
-        list
-            list of inversion statistics for each inner loop of the MFR algorithm
+        numpy.ndarray
+            inversion result with shape (#nodes,)
+        list of dict
+            statistics returned by the inner inversion in each MFI iteration
         """
         if initial_guess is None:
             g = np.ones(gmat.shape[1])
@@ -93,8 +131,8 @@ class MinimumFisherRegularisation:
 
         # MFI loop (outer)
         for inversion in self.inversion_list:
-            node_weights = 1 / g
-            node_weights[g <= 0] = np.nanmax(node_weights)
+            g_floor = np.maximum(g, g.max() * self.weight_floor)
+            node_weights = 1 / g_floor
             regularisation = weighted_squares(
                 derivatives,
                 derivative_weights,
@@ -103,7 +141,7 @@ class MinimumFisherRegularisation:
             # Regularisation loop (inner)
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                inversion, stats = inversion(data, gmat, regularisation, errors)
+                g, stats = inversion(data, gmat, regularisation, errors)
             for warning in w:
                 warnings.warn(
                     f"MFR solver: {warning.message}",
@@ -111,5 +149,4 @@ class MinimumFisherRegularisation:
                     stacklevel=2,
                 )
             statistics.append(stats)
-            g = inversion
         return g, statistics

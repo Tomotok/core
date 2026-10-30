@@ -2,9 +2,11 @@
 #
 # Licensed under the EUPL-1.2 or later.
 """
-Contains inversion class for Biorthogonal Basis Decomposition Algorithm proposed by J. Cavlier. 
-It is a simplified form of wavelet-vaguelette decomposition algorithm by R. Nguyen van Yen
+Contains inversion class for the Biorthogonal Basis Decomposition algorithm proposed by J. Cavalier [BOB1]_.
+It is a simplified form of the wavelet-vaguelette decomposition algorithm by R. Nguyen van Yen [BOB2]_.
 
+References
+----------
 .. [BOB1] Jordan Cavalier et al., Nucl. Fusion 59 (2019): 056025
 .. [BOB2] R. Nguyen van Yen et al., Nucl. Fusion 52 (2011): 013005
 """
@@ -22,18 +24,14 @@ from tomotok.tools.hdf import sparse_to_hdf, hdf_to_sparse
 
 class Bob(Inversion):
     r"""
-    BiOrthogonal Basis decomposition
+    Biorthogonal Basis Decomposition (BoB) inversion method.
 
     Attributes
     ----------
-    basis : scipy.sparse.spmatrix
-        :math:`\mathbf{b}_i` basis vectors of reconstruction plane
-    basis_inv : scipy.sparse.spmatrix
-        inverse of basis matrix, used for transformation to node basis
-    decomposed_matrix : scipy.sparse.csr_matrix
-        :math:`\hat{\mathbf{e}}_i` decomposed matrix used to transform image into reconstruction plane
-    norms : numpy.ndarray
-        node norms used in thresholding
+    basis_inv : scipy.sparse.sparray
+        inverse of the decomposition basis matrix, used for transformation to the node basis
+    adjoint_basis : scipy.sparse.csr_array or None
+        :math:`\tilde{\mathbf{b}}_i` adjoint basis vectors in columns, used to transform image into reconstruction plane
     """
     def __init__(
         self,
@@ -57,6 +55,11 @@ class Bob(Inversion):
         self._adjoint_basis = decomposed_matrix
         self._norms: np.ndarray | None = None
 
+    @property
+    def adjoint_basis(self) -> sparse.sparray | None:
+        """Adjoint basis vectors in columns with shape (#channels, #decomposition vectors), None before decomposition."""
+        return self._adjoint_basis
+
     # @property
     # def basis(self):
     #     return self._basis
@@ -74,23 +77,23 @@ class Bob(Inversion):
         reg_factor: float = 0,
     ):
         """
-        Decomposes the geometry matrix using basis vectors
+        Decompose the geometry matrix using basis vectors.
+
+        Computes the adjoint basis, which is stored in the `adjoint_basis` attribute.
 
         Parameters
         ----------
         gmat : scipy.sparse.csr_array or scipy.sparse.csc_array
-            geometry/contribution matrix
-        basis : sparse array
-            matrix with decomposition basis vectors
+            geometry matrix with shape (#channels, #nodes)
+        basis : scipy.sparse.csc_array
+            square matrix with decomposition basis vectors in columns, shape (#nodes, #nodes)
         reg_factor : float, optional
-            regularisation factor passed to cholesky decomposition
-            determines weight of regularisation by identity matrix relatively to arbitrary matrix maximum value
-        solver_kw : dict
-            keyword parameters passed to the compute_coefficients method
+            factor of regularisation by identity matrix added before computing the inverse,
+            relative to the maximum value of the inverted matrix, by default 0 (no regularisation)
 
         See Also
         --------
-        compute_coefficients : method handling computation of coefficients to see supported solver keywords
+        compute_coordinates : method computing the inverse using the solver
         """
         los_num = gmat.shape[0]
         node_num = gmat.shape[1]
@@ -111,7 +114,7 @@ class Bob(Inversion):
         return
 
     def compute_coordinates(self, a: sparse.csc_array) -> sparse.csr_array:
-        """Computes coordinate matrix for transformation to reconstruction plane."""
+        """Compute coordinate matrix for transformation to reconstruction plane."""
         b = np.eye(a.shape[0])
         c = self.solver.solve(a, b)
         return sparse.csr_array(c)
@@ -161,7 +164,7 @@ class Bob(Inversion):
 
     def save_decomposition(self, floc: str | Path, description: str = '') -> None:
         """
-        Saves decomposition matrix and basis to hdf file. Norms are also included if calculated.
+        Save decomposition matrix and basis to hdf file. Norms are also included if calculated.
 
         Parameters
         ----------
@@ -185,7 +188,7 @@ class Bob(Inversion):
 
     def load_decomposition(self, floc: str | Path) -> None:
         """
-        Loads decomposed matrix and basis from an HDF file.
+        Load decomposed matrix and basis from an HDF file.
 
         Norms are loaded only if available in the file.
 
@@ -205,7 +208,7 @@ class Bob(Inversion):
 
     def normalise(self, precision: float = 1e-6) -> None:
         """
-        Computes normalisation factors for decomposition matrix.
+        Compute normalisation factors for decomposition matrix.
 
         Parameters
         ----------
@@ -221,7 +224,7 @@ class Bob(Inversion):
 
     def thresholding(self, image: np.ndarray, c: int, precision: float = 1e-6, conv: float = 1e-9) -> np.ndarray:
         """
-        Applies thresholding method to provided image.
+        Apply thresholding method to provided image.
 
         Parameters
         ----------
@@ -277,7 +280,7 @@ class Bob(Inversion):
 
     def invert(self, data: np.ndarray) -> np.ndarray:
         """
-        Uses decomposed matrix to project data into reconstruction plane and then transform to node basis.
+        Use decomposed matrix to project data into reconstruction plane and then transform to node basis.
 
         Parameters
         ----------

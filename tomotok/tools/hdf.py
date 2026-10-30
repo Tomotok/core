@@ -7,6 +7,8 @@ Currently supported formats:
  - scipy.sparse.csc_array
  - scipy.sparse.csr_array
  - scipy.sparse.dia_array
+
+Legacy sparse matrices (e.g. ``scipy.sparse.csc_matrix``) are not supported and have to be converted to sparse arrays.
 """
 import h5py
 from scipy import sparse
@@ -14,7 +16,19 @@ from scipy import sparse
 
 def sparse_to_hdf(matrix: sparse.csc_array | sparse.csr_array | sparse.dia_array, group: h5py.Group):
     """
-    Saves scipy.sparse matrix of formats (csc, csr, dia) into hdf file group.
+    Save sparse array of format csc, csr or dia into hdf file group.
+
+    Parameters
+    ----------
+    matrix : scipy.sparse.csc_array or scipy.sparse.csr_array or scipy.sparse.dia_array
+        sparse array to be saved
+    group : h5py.Group
+        group of an open hdf file where the array is stored
+
+    Raises
+    ------
+    TypeError
+        if the matrix format is not supported
     """
     if isinstance(matrix, sparse.dia_array):
         dia_to_hdf(matrix, group)
@@ -24,9 +38,24 @@ def sparse_to_hdf(matrix: sparse.csc_array | sparse.csr_array | sparse.dia_array
         raise TypeError(f'Unsupported matrix type `{type(matrix)}`. Use dia, csc or csr.')
 
 
-def hdf_to_sparse(group: h5py.Group) -> sparse.spmatrix:
+def hdf_to_sparse(group: h5py.Group) -> sparse.sparray:
     """
-    Loads scipy.sparse matrix of formats (csc, csr, dia) from hdf file group.
+    Load sparse array of format csc, csr or dia from hdf file group.
+
+    Parameters
+    ----------
+    group : h5py.Group
+        group of an open hdf file containing the array saved by :func:`sparse_to_hdf`
+
+    Returns
+    -------
+    scipy.sparse.csc_array or scipy.sparse.csr_array or scipy.sparse.dia_array
+        loaded sparse array
+
+    Raises
+    ------
+    ValueError
+        if the stored format is not supported
     """
     form = group.attrs['type']
     if form == 'dia':
@@ -40,7 +69,14 @@ def hdf_to_sparse(group: h5py.Group) -> sparse.spmatrix:
 
 def dia_to_hdf(matrix: sparse.dia_array, group: h5py.Group):
     """
-    Saves dia matrix to hdf group.
+    Save sparse diagonal array to hdf group.
+
+    Parameters
+    ----------
+    matrix : scipy.sparse.dia_array
+        sparse array to be saved
+    group : h5py.Group
+        group of an open hdf file where the array is stored
     """
     if not isinstance(matrix, sparse.dia_array):
         raise TypeError(f'Provided matrix is not of sparse diagonal type but `{type(matrix)}`.')
@@ -52,7 +88,17 @@ def dia_to_hdf(matrix: sparse.dia_array, group: h5py.Group):
 
 def hdf_to_dia(group: h5py.Group) -> sparse.dia_array:
     """
-    Loads dia matrix from hdf group.
+    Load sparse diagonal array from hdf group.
+
+    Parameters
+    ----------
+    group : h5py.Group
+        group of an open hdf file containing the array
+
+    Returns
+    -------
+    scipy.sparse.dia_array
+        loaded sparse array
     """
     form = group.attrs['type']
     if form != 'dia':
@@ -66,7 +112,14 @@ def hdf_to_dia(group: h5py.Group) -> sparse.dia_array:
 
 def cs_to_hdf(matrix: sparse.csc_array | sparse.csr_array, group: h5py.Group):
     """
-    Saves compressed sparse matrix to hdf group.
+    Save compressed sparse array to hdf group.
+
+    Parameters
+    ----------
+    matrix : scipy.sparse.csc_array or scipy.sparse.csr_array
+        sparse array to be saved
+    group : h5py.Group
+        group of an open hdf file where the array is stored
     """
     if not isinstance(matrix, (sparse.csc_array, sparse.csr_array)):
         raise TypeError(f'Provided matrix is not of csc or csr type but {type(matrix)}.')
@@ -79,7 +132,17 @@ def cs_to_hdf(matrix: sparse.csc_array | sparse.csr_array, group: h5py.Group):
 
 def hdf_to_cs(group: h5py.Group) -> sparse.csc_array | sparse.csr_array:
     """
-    Loads compressed sparse matrix from hdf group.
+    Load compressed sparse array from hdf group.
+
+    Parameters
+    ----------
+    group : h5py.Group
+        group of an open hdf file containing the array
+
+    Returns
+    -------
+    scipy.sparse.csc_array or scipy.sparse.csr_array
+        loaded sparse array
     """
     form = group.attrs['type']
     if form not in ['csc', 'csr']:

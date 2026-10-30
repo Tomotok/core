@@ -1,14 +1,9 @@
-.. tomotok documentation master file, created by
-   sphinx-quickstart on Tue Jun  9 10:48:03 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 .. title:: Home
 
 Tomotok's documentation
 =======================
 
-Welcome to the Tomotok project for tomography of tokamak plasma.
+Tomotok is a framework for the tomographic inversion of fusion plasmas, focusing on inversion methods based on discretisation.
 
 .. toctree::
    :maxdepth: 2
@@ -16,22 +11,21 @@ Welcome to the Tomotok project for tomography of tokamak plasma.
    :caption: Table of Contents
 
    welcome
-   licence
    install
-   inversions/inversions
-   auxilia/auxilia
+   quickstart
+   tomography/tomography
+   methods/methods
    glossary
+   licence
 
 .. toctree::
-   :numbered:
    :maxdepth: 1
-   :caption: Api Doc
+   :caption: API reference
 
-   api/tomotok.geometry
-   api/tomotok.inversions
-   api/tomotok.regularisations
-   api/tomotok.tools
-   api/tomotok.core
+   api/geometry
+   api/regularisations
+   api/inversions
+   api/tools
 
 Indices and tables
 ------------------

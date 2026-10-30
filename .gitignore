@@ -6,6 +6,7 @@ target/
 
 # docs build
 docs/build
+docs/source/api/generated
 
 # caches
 __pycache__/

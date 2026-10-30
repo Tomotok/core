@@ -1,3 +1,5 @@
+# Copyright 2026 Institute of Plasma Physics of the Czech Academy of Sciences.
+# Licensed under the EUPL-1.2 or later.
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -10,7 +12,19 @@ from .base import Solver
 
 
 class OptaxNNLS(Solver):
+    """
+    Solves linear systems using the non-negative least squares method from Optax.
+
+    Uses ``optax.nnls`` compiled by JAX. Sparse inputs are converted to dense arrays.
+    Requires the optional dependencies ``jax`` and ``optax``.
+    """
     def __init__(self, iterations: int = 5_000):
+        """
+        Parameters
+        ----------
+        iterations : int, optional
+            number of iterations of the NNLS algorithm, by default 5000
+        """
         super().__init__()
         self.iterations = iterations
 
@@ -32,7 +46,12 @@ class OptaxNNLS(Solver):
 
 class OptaxNN(Solver):
     """
-    Dense matrices only, requires reasonable estimate on learning rate and parameters.
+    Solves linear systems with non-negativity constraint by gradient-based optimisation using Optax.
+
+    Minimises the squared residual using the Adam optimiser with projection to non-negative values.
+    Works with dense matrices only, sparse inputs are converted to dense arrays.
+    Requires a reasonable estimate of the learning rate and other parameters.
+    Requires the optional dependencies ``jax`` and ``optax``.
     """
     def __init__(
             self,
@@ -40,6 +59,16 @@ class OptaxNN(Solver):
             learning_rate: float = 0.1,
             tolerance: float = 1e-8,
         ):
+        """
+        Parameters
+        ----------
+        max_iter_num : int, optional
+            maximum number of optimisation steps, by default 10000
+        learning_rate : float, optional
+            learning rate of the Adam optimiser, by default 0.1
+        tolerance : float, optional
+            optimisation stops when the change of the loss between two steps is smaller, by default 1e-8
+        """
         super().__init__()
         self.max_iter_num = max_iter_num
         self.tolerance = tolerance

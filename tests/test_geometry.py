@@ -83,6 +83,31 @@ class GeometryGeneratorsTestCase(unittest.TestCase):
         self.assertRaises(ValueError, dense_line, bad_starts, bad_ends, self.grid)
         self.assertRaises(ValueError, sparse_line, bad_starts, bad_ends, self.grid)
 
+    def test_dense_line_handles_zero_length_los(self):
+        starts = np.array([[1.5, 0.0, 0.0]])
+        ends = np.array([[1.5, 0.0, 0.0]])
+
+        dense = dense_line(starts, ends, self.grid, step=0.05)
+
+        self.assertFalse(np.any(np.isnan(dense)))
+        np.testing.assert_array_equal(dense, np.zeros((1, self.grid.size)))
+
+    def test_sparse_line_rejects_single_zero_length_los(self):
+        starts = np.array([[1.5, 0.0, 0.0]])
+        ends = np.array([[1.5, 0.0, 0.0]])
+
+        self.assertRaises(ValueError, sparse_line, starts, ends, self.grid, step=0.05)
+
+    def test_sparse_line_handles_zero_length_los_in_mixed_batch(self):
+        starts = np.array([[1.5, 0.0, 0.0], [1.5, 0.0, -0.8]])
+        ends = np.array([[1.5, 0.0, 0.0], [1.5, 0.0, 0.8]])
+
+        sparse_res = sparse_line(starts, ends, self.grid, step=0.05).toarray()
+
+        self.assertFalse(np.any(np.isnan(sparse_res)))
+        np.testing.assert_array_equal(sparse_res[0], np.zeros(self.grid.size))
+        self.assertTrue(np.any(sparse_res[1]))
+
     def test_calcam_sparse_line_matches_sparse_line(self):
         starts = np.ones_like(self.endpoints) * self.pupil
 

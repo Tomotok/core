@@ -4,11 +4,10 @@
 """
 Module with numeric generators of geometry matrix.
 """
-from warnings import warn
-import time
+import warnings
 
 import numpy as np
-import scipy.sparse as sparse
+from scipy import sparse
 
 from .grids import RegularGrid
 
@@ -21,13 +20,13 @@ def sparse_line_3d(
     step: float = 1e-3, 
     rmin: float | None = None
 ) -> sparse.csr_matrix:
-    """Computes geometry matrix using simple numerical integration algorithm.
+    """Compute geometry matrix using simple numerical integration algorithm.
 
     Assumes toroidally symmetric reconstruction nodes. 
     Optimized version working with sparse matrices.
 
     .. deprecated:: 2.0
-        Use :func:`sparse_line` instead.
+        Use :func:`~tomotok.geometry.sparse_line` instead.
 
     Parameters
     ----------
@@ -49,9 +48,9 @@ def sparse_line_3d(
 
     See Also
     --------
-    sparse_line
+    tomotok.geometry.sparse_line
     """
-    warn(
+    warnings.warn(
         'Function `sparse_line_3d` is deprecated and will be removed in a future version. ' +
         'Use `sparse_line` instead.',
         DeprecationWarning,
@@ -96,12 +95,12 @@ def calcam_sparse_line_3d(
     elong: float = 1.0,
     steps: float | None = None
 ) -> sparse.csr_matrix:
-    """Computes geometry matrix from calcam input using sparse_line_3d algorithm.
+    """Compute geometry matrix from calcam input using sparse_line_3d algorithm.
 
     Assumes that pupil and dirs coordinates are (x, y, z) = (horizontal, horizontal, vertical)
 
     .. deprecated:: 2.0
-        Use :func:`calcam_sparse_line` instead.
+        Use :func:`~tomotok.geometry.calcam_sparse_line` instead.
 
     Parameters
     ----------
@@ -124,16 +123,16 @@ def calcam_sparse_line_3d(
 
     See Also
     --------
-    calcam_sparse_line
+    tomotok.geometry.calcam_sparse_line
     """
-    warn(
+    warnings.warn(
         'Function `calcam_sparse_line_3d` is deprecated and will be removed in a future version. ' +
         'Use `calcam_sparse_line` instead.',
         DeprecationWarning,
         stacklevel=2
     )
     if steps is not None:
-        warn('"steps" parameter was deprecated by "step"', DeprecationWarning)
+        warnings.warn('"steps" parameter was deprecated by "step"', DeprecationWarning)
         step = steps
     if elong != 1.:
         dirs = elong * dirs
@@ -155,7 +154,7 @@ def sparse_line(
     step: float = 1e-3,
     rmin: float = 0
 ) -> sparse.csr_array:
-    """Computes geometry matrix using simple numerical integration algorithm.
+    """Compute geometry matrix using simple numerical integration algorithm.
 
     Uses lines of sight start and end points in 3D Cartesian coordinates as input.
     The line between start and end points is divided into small segments of length `step`,
@@ -175,7 +174,7 @@ def sparse_line(
     step : float, optional
         Integration step, by default 1e-3
     rmin : float, optional
-        Stops the lines of sight if they intersect cylinder with radius of rmin, by default -1
+        Stops the lines of sight if they intersect cylinder with radius of rmin, by default 0
 
     Returns
     -------
@@ -191,9 +190,11 @@ def sparse_line(
     diff = ends - starts
     dst = np.linalg.norm(diff, axis=1)
     line_num = diff.shape[0]
-    gmat = sparse.lil_array((line_num, grid.size))
+    rows = [np.empty(0, dtype=int)]
+    cols = [np.empty(0, dtype=int)]
+    data = [np.empty(0)]
     for i in range(line_num):
-        steps = int(dst[i] / step)
+        steps = max(int(dst[i] / step), 1)
         x = np.linspace(starts[i, 0], ends[i, 0], steps)
         y = np.linspace(starts[i, 1], ends[i, 1], steps)
         z = np.linspace(starts[i, 2], ends[i, 2], steps)
@@ -201,13 +202,21 @@ def sparse_line(
         if rmin > 0:
             hit = np.any(r < rmin)
             if hit:
-                idx = r.argmin()
+                idx = np.argmax(r < rmin)
                 r = r[:idx]
                 z = z[:idx]
         hist = np.histogram2d(r, z, bins=[grid.r_border, grid.z_border])
         row = hist[0].T * dst[i] / steps
-        srow = sparse.coo_array(row.flatten())
-        gmat[i] = srow
+        nz_z, nz_r = row.nonzero()
+        rows.append(np.full(nz_z.shape, i))
+        cols.append(nz_z * grid.nr + nz_r)
+        data.append(row[nz_z, nz_r])
+    rows = np.concatenate(rows)
+    cols = np.concatenate(cols)
+    data = np.concatenate(data)
+    if len(rows) == 0:
+        raise ValueError('No sightlines intersect the grid.')
+    gmat = sparse.coo_array((data, (rows, cols)), shape=(line_num, grid.size))
     return gmat.tocsr()
 
 
@@ -245,7 +254,7 @@ def dense_line(
     step: float = 1e-3,
     rmin: float = 0
 ) -> np.ndarray:
-    """Computes geometry matrix using simple numerical integration algorithm.
+    """Compute geometry matrix using simple numerical integration algorithm.
 
     Uses lines of sight start and end points in 3D Cartesian coordinates as input.
 
@@ -280,7 +289,7 @@ def dense_line(
     line_num = diff.shape[0]
     gmat = np.zeros((line_num, grid.size))
     for i in range(line_num):
-        steps = int(dst[i] / step)
+        steps = max(int(dst[i] / step), 1)
         x = np.linspace(starts[i, 0], ends[i, 0], steps)
         y = np.linspace(starts[i, 1], ends[i, 1], steps)
         z = np.linspace(starts[i, 2], ends[i, 2], steps)

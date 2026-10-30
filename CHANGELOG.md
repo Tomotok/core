@@ -5,20 +5,32 @@ Changes
 -------
  - Completely changed package structure to be more descriptive and to limit depth of submodules
  - reworked inversion class structure around solver and regularised-solver hierarchies with selector-based regularisation and engine-based linear algebra backends
+ - Handling of weights for negative nodes in MFR regularisation update is now relative to maximum in previous iteration
  - reworked format of line of sights, updated gmat computation functions
  - line of sight saving to a single json file
- - new function for calculation of anisotropic derivative matrix
+ - restructured documentation, general theoretical background and inversion methods are described in separate chapters, added quick start guide and extended glossary
+ - API reference is curated using autosummary and documents objects at their public import paths, addresses of API pages changed
+ - licence specified as EUPL-1.2 or later in package metadata
 
 New Features
 ------------
+ - new function for calculation of anisotropic derivative matrix
  - tutorial for checking anisotropic derivative matrix
  - tests for line of sight saving and loading
  - tests for derivative matrix computation
  - add github workflow for testing code on multiple python versions
+ - read-only `adjoint_basis` property of `Bob`
+ - `square` keyword of `FastSelector`
+ - citation metadata in CITATION.cff
+ - tests checking that the public API is listed in the documentation and that the scripts generating documentation figures run
 
 Fixes
 -----
  - updated derivative matrix checker
+ - Algebraic.invert no longer fails when data array is passed
+ - GevAlgebraic now reproduces the Phillips-Tikhonov solution, decomposition stores generalised singular values instead of their squares
+ - GevAlgebraic no longer fails when the number of channels is not smaller than the number of nodes and discards numerically zero eigenvalues instead of producing NaN for rank-deficient geometry matrix
+ - corrected and completed docstrings, constructor parameters are shown in the documentation
 
 Version 1.3.1 (03.01.2024)
 ==========================
@@ -28,7 +40,7 @@ Fixes
  - numpy ndarray dtype parameters to be compatible with newer numpy versions
 
 Version 1.3 (21.07.2023)
-=======================
+========================
 
 Changes
 -------

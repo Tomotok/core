@@ -42,7 +42,7 @@ class Tokamak(object):
 
     def load_magnetic_field(self, shot: int, tvec: ArrayLike = None) -> Magnetics:
         """
-        Loads magnetic field data from database for given shot and time slices.
+        Load magnetic field data from database for given shot and time slices.
 
         Specific implementation should be provided in subclass.
 
