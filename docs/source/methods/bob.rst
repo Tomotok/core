@@ -14,7 +14,7 @@ As the name suggests, this algorithm uses multiple vector spaces and bases to so
 
 The **reconstruction space** contains all possible solutions of the tomography problem on a given grid. Its elementary basis :math:`\mathbf{e} = (\mathbf{e}_1, \dots, \mathbf{e}_{N_\mathrm{n}})` is given by the basis functions of the series expansion, e.g. by individual nodes of the grid. Any discretised solution :math:`\mathbf{g} \in \mathbb{R}^{N_\mathrm{n}}` holds the coordinates of the emissivity in this basis.
 
-The **decomposition basis** :math:`\mathbf{b} = (\mathbf{b}_1, \dots, \mathbf{b}_{N_\mathrm{d}})` is also selected by the user. Each vector :math:`\mathbf{b}_i` holds the coordinates of a decomposition vector in the elementary basis and the vectors should be selected so that the basis is orthonormal. If the simple node basis is used, then :math:`N_\mathrm{d} = N_\mathrm{n}` and each basis vector holds one at the position of the node it represents and zero elsewhere, i.e. the basis can be represented by an identity matrix. For wavelet bases, each vector consists of wavelet coefficients.
+The **decomposition basis** :math:`\mathbf{b} = (\mathbf{b}_1, \dots, \mathbf{b}_{N_\mathrm{d}})` is also selected by the user. Each vector :math:`\mathbf{b}_i` holds the coordinates of a decomposition vector in the elementary basis and the vectors should be selected so that the basis is orthonormal. If the simple node basis is used, then :math:`N_\mathrm{d} = N_\mathrm{n}` and each basis vector holds one at the position of the node it represents and zero elsewhere, i.e. the basis can be represented by an identity matrix. For wavelet bases, each vector holds the values of one wavelet in the nodes, i.e. its coordinates in the elementary basis.
 
 The **signal space** :math:`\mathbb{R}^{N_\mathrm{c}}` encompasses all possible signals that a diagnostic system with :math:`N_\mathrm{c}` channels (or camera pixels) can record. Its subspace, the **projection space**, holds all signals obtainable as a linear combination of projections of the basis functions. It is the image of the linear map :math:`T: \mathbb{R}^{N_\mathrm{n}} \to \mathbb{R}^{N_\mathrm{c}}` defined by the geometry matrix, :math:`T\mathbf{g} = \mathbf{T} \cdot \mathbf{g}`.
 
@@ -87,15 +87,20 @@ Restricting the signals to the projection space formally justifies the computati
 Thresholding
 ------------
 
-Thresholding is a method for noise suppression in the reconstruction. It is based on the assumption that the noise is spread over many decomposition vectors while the signal is concentrated in a few of them [B1]_. This assumption expects a wavelet decomposition basis, but thresholding can be used with the single node basis as well. It can still suppress background noise and enhance the most prominent features in the reconstruction, which proved useful for blob tracking in the edge plasma [B2]_.
+Thresholding is a method for noise suppression in the reconstruction. It is based on the assumption that the noise is spread over many decomposition vectors while the signal is concentrated in a few of them [B1]_. This assumption is best fulfilled by a wavelet decomposition basis, but thresholding can be used with the simple node basis as well. It can still suppress background noise and enhance the most prominent features in the reconstruction, which proved useful for blob tracking in the edge plasma [B2]_.
 
-The method compares the sizes of the normalised coefficients :math:`a_i = |\tilde{\mathbf{b}}_i \cdot \mathbf{f}| / \|\tilde{\mathbf{b}}_i\|` and removes contributions of adjoint vectors below a threshold. Since the level of noise is not known, the threshold is determined iteratively for each image as a multiple of the root mean square of the coefficients considered to be noise
+The method compares the sizes of the coefficients
 
 .. math::
-    \left( \Theta^{n+1} \right)^2 = \frac{c^2}{N^n} \sum_{i \in S^n} a_i^2 \,, \qquad
-    S^n = \left\{ i \mid a_i \leq \Theta^n \right\} \,,
+    \beta_i = |\tilde{\mathbf{b}}_i \cdot \mathbf{f}| \,,
 
-where :math:`c` is the noise suppression parameter and :math:`N^n` is the number of coefficients in the set :math:`S^n`. The iteration starts with :math:`\Theta^0 = \infty`, i.e. all coefficients are used, and stops when the threshold converges. The coefficients with :math:`a_i < \Theta` are then set to zero and the remaining ones are transformed to the elementary basis.
+i.e. the projections of the signal onto the normalised adjoint basis vectors, which are equal to :math:`\kappa_i |\mathbf{b}_i \cdot \mathbf{g}|` for noise-free signals. Contributions of adjoint vectors with coefficients below a threshold are removed. If the noise is additive and independent between channels, with the same absolute standard deviation in all of them (e.g. in units of the measured signal), it contributes to each coefficient with this standard deviation, since the adjoint basis vectors are normalised, so a single threshold can be used for all coefficients. This does not hold for noise proportional to the signal. In that case, the signals and the rows of the geometry matrix can be divided by the expected errors of the channels before the decomposition. Since the level of noise is not known, the threshold is determined iteratively for each image as a multiple of the root mean square of the coefficients considered to be noise
+
+.. math::
+    \left( \Theta^{n+1} \right)^2 = \frac{c^2}{N^n} \sum_{i \in S^n} \beta_i^2 \,, \qquad
+    S^n = \left\{ i \mid \beta_i \leq \Theta^n \right\} \,,
+
+where :math:`c` is the noise suppression parameter and :math:`N^n` is the number of coefficients in the set :math:`S^n`. The iteration starts with :math:`\Theta^0 = \infty`, i.e. all coefficients are used, and stops when the threshold converges. The coefficients with :math:`\beta_i < \Theta` are then set to zero and the remaining ones are transformed to the elementary basis.
 
 .. figure:: figures/bob_thresholding.png
     :width: 100%
@@ -106,7 +111,7 @@ where :math:`c` is the noise suppression parameter and :math:`N^n` is the number
 Implementation
 --------------
 
-The algorithm is implemented in :class:`~tomotok.inversions.bob.Bob`. The ``decompose`` method computes the adjoint basis from the geometry matrix and the decomposition basis; the result can be stored using ``save_decomposition`` and reused with ``load_decomposition``. The ``invert`` method (or calling the instance) computes the reconstruction by matrix multiplication and ``thresholding`` applies the thresholding method with sensitivity ``c`` to a single image.
+The algorithm is implemented in :class:`~tomotok.inversions.bob.Bob`. The ``decompose`` method computes the adjoint basis from the geometry matrix and the decomposition basis; the result can be stored using ``save_decomposition`` and reused with ``load_decomposition``. The ``invert`` method (or calling the instance) computes the reconstruction by matrix multiplication and ``thresholding`` applies the thresholding method with sensitivity ``c`` to a single image. The adjoint basis is stored with the normalisation :math:`\kappa_i` absorbed, i.e. its columns are :math:`\tilde{\mathbf{b}}_i / \kappa_i`, and the coefficients :math:`\beta_i` are obtained by dividing the projections of the signal onto these columns by their norms. Unlike the regularised methods, :class:`~tomotok.inversions.bob.Bob` has no parameter for expected errors, so the normalisation by errors described above has to be done by the user.
 
 No tools for creating wavelet bases are currently provided; a simple node basis represented by an identity matrix can be used.
 
