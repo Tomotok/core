@@ -20,7 +20,7 @@ def sparse_line_3d(
     step: float = 1e-3, 
     rmin: float | None = None
 ) -> sparse.csr_matrix:
-    """Computes geometry matrix using simple numerical integration algorithm.
+    """Compute geometry matrix using simple numerical integration algorithm.
 
     Assumes toroidally symmetric reconstruction nodes. 
     Optimized version working with sparse matrices.
@@ -95,7 +95,7 @@ def calcam_sparse_line_3d(
     elong: float = 1.0,
     steps: float | None = None
 ) -> sparse.csr_matrix:
-    """Computes geometry matrix from calcam input using sparse_line_3d algorithm.
+    """Compute geometry matrix from calcam input using sparse_line_3d algorithm.
 
     Assumes that pupil and dirs coordinates are (x, y, z) = (horizontal, horizontal, vertical)
 
@@ -154,7 +154,7 @@ def sparse_line(
     step: float = 1e-3,
     rmin: float = 0
 ) -> sparse.csr_array:
-    """Computes geometry matrix using simple numerical integration algorithm.
+    """Compute geometry matrix using simple numerical integration algorithm.
 
     Uses lines of sight start and end points in 3D Cartesian coordinates as input.
     The line between start and end points is divided into small segments of length `step`,
@@ -254,7 +254,7 @@ def dense_line(
     step: float = 1e-3,
     rmin: float = 0
 ) -> np.ndarray:
-    """Computes geometry matrix using simple numerical integration algorithm.
+    """Compute geometry matrix using simple numerical integration algorithm.
 
     Uses lines of sight start and end points in 3D Cartesian coordinates as input.
 

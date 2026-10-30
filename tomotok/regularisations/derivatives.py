@@ -18,7 +18,7 @@ def all_direction_derivative_matrices(
     compensation_fraction: float = 1,
 ) -> list[sparse.csc_array]:
     """
-    Creates derivative matrices for all 8 directions using provided scheme.
+    Create derivative matrices for all 8 directions using provided scheme.
 
     Parameters
     ----------
@@ -63,7 +63,7 @@ def standard_anisotropic_derivative_matrices(
     compensation_fraction: float = 1,
 ) -> list[sparse.csc_array]:
     """
-    Creates anisotropic derivative matrices for parallel and perpendicular directions.
+    Create anisotropic derivative matrices for parallel and perpendicular directions.
 
     Parameters
     ----------
@@ -97,7 +97,7 @@ def standard_anisotropic_derivative_matrices(
 
 def reduce_matrix(mat: sparse.sparray, mask: np.ndarray) -> sparse.sparray:
     """
-    Creates reduced matrix by cutting out rows and columns representing unwanted nodes.
+    Create reduced matrix by cutting out rows and columns representing unwanted nodes.
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def reduce_matrix(mat: sparse.sparray, mask: np.ndarray) -> sparse.sparray:
 
 def compensate_matrix(mat: sparse.sparray, compensation_fraction: float = 1) -> sparse.sparray:
     """
-    Subtracts from diagonal so that sum of each row is zero.
+    Subtract from diagonal so that sum of each row is zero.
 
     Parameters
     ----------
@@ -156,7 +156,7 @@ def derivative_matrix(
     compensation_fraction: float = 1,
 ) -> sparse.csc_array:
     """
-    Creates a derivative matrix using numerical differences
+    Create a derivative matrix using numerical differences
 
     Parameters
     ----------
@@ -266,7 +266,7 @@ def laplace_matrix(
     diagonals: bool = True,
 ) -> sparse.csc_array:
     """
-    Creates sparse laplace matrix.
+    Create sparse laplace matrix.
 
     Parameters
     ----------
@@ -323,7 +323,7 @@ def anisotropic_derivative_matrix(
     compensation_fraction: float = 1.0
 ) -> sparse.csc_array:
     """
-    Computes derivative matrix with varying direction based on flux surfaces shapes.
+    Compute derivative matrix with varying direction based on flux surfaces shapes.
 
     Uses direction of gradient to distribute contribution to two neighboring nodes.
     These are designated as previous and next as the direction rotates.

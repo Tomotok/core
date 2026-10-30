@@ -150,7 +150,7 @@ class RegularisedInversion(Inversion):
         return out, stats
 
     def invert(self, alpha: float) -> np.ndarray:
-        """Inverts the regularised problem using provided regularisation parameter.
+        """Invert the regularised problem using provided regularisation parameter.
 
         Uses the standard inputs to produce the regularised problem and then uses the solve method to find the solution.
 
@@ -167,7 +167,7 @@ class RegularisedInversion(Inversion):
         raise NotImplementedError("This method should be defined by subclasses.")
 
     def determine_regularisation(self, *args: Any, **kwargs: Any) -> tuple[float, dict[str, Any]]:
-        """Determines the value of the regularisation parameter to be used in the inversion.
+        """Determine the value of the regularisation parameter to be used in the inversion.
 
         Parameters
         ----------
@@ -265,7 +265,7 @@ class PearsonSelector(RegularisationSelector):
 
     def determine(self, inversion: RegularisedInversion) -> tuple[float, dict[str, Any]]:
         """
-        Determines value of regularisation parameter using minimisation of Pearson test.
+        Determine value of regularisation parameter using minimisation of Pearson test.
         
         The minimisation is done using the `minimize_scalar` function from `scipy.optimize`.
 
@@ -324,7 +324,7 @@ class FixedSelector(RegularisationSelector):
         self._value = value
 
     def determine(self, inversion: RegularisedInversion | None = None) -> tuple[float, dict[str, Any]]:
-        """Determines value of regularisation parameter using the fixed value.
+        """Determine value of regularisation parameter using the fixed value.
 
         Returns
         -------

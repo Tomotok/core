@@ -11,7 +11,7 @@ def weighted_squares(
     node_weights: ArrayLike | None = None,
 ) -> sparse.csr_array:
     """
-    Computes regularisation matrix as a weighted sum of squares of the input matrices.
+    Compute regularisation matrix as a weighted sum of squares of the input matrices.
 
     The node weights can be based on a previous result, creating an iterative nonlinear regularisation scheme.
     For example, the MFR algorithm uses the inverse of the solution from the previous iteration as node weights.

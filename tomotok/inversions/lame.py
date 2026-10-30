@@ -66,7 +66,7 @@ class Algebraic(RegularisedInversion):
         super()._cache_inputs(data, gmat, regularisation)
 
     def decompose(self, gmat, regularisation, *args, **kwargs):
-        """Prepares matrices used in the series expansion.
+        """Prepare matrices used in the series expansion.
 
         This method should be implemented in derived class.
         The matrices are stored in the class attributes `u`, `s`, and `v`.
@@ -74,7 +74,7 @@ class Algebraic(RegularisedInversion):
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     def invert(self, alpha, data=None, num=None) -> np.ndarray:
-        r"""Computes emissivity :math:`g` using provided regularisation parameter `alpha`.
+        r"""Compute emissivity :math:`g` using provided regularisation parameter `alpha`.
         
         The inversion uses decomposed vectors and series expansion to solve the regularised problem.
         The series expansion is based on the following formula:
@@ -139,7 +139,7 @@ class SvdAlgebraic(Algebraic):
         gmat: np.ndarray | sparse.spmatrix | sparse.sparray,
         regularisation: np.ndarray | sparse.spmatrix | sparse.sparray
     ):
-        """Decomposes geometry and regularisation matrices to form suitable for series expansion.
+        """Decompose geometry and regularisation matrices to form suitable for series expansion.
 
         All min(#channels, #nodes) components are computed.
 
@@ -191,7 +191,7 @@ class GevAlgebraic(Algebraic):
         gmat: np.ndarray | sparse.spmatrix | sparse.sparray,
         regularisation: np.ndarray | sparse.spmatrix | sparse.sparray
     ):
-        """Decomposes geometry and regularisation matrices to form suitable for series expansion.
+        """Decompose geometry and regularisation matrices to form suitable for series expansion.
 
         The number of computed eigenvalues is given by the ``num`` parameter, by default the number of channels.
         If it is not smaller than the number of nodes, the sparse eigenvalue solver cannot be used
@@ -291,7 +291,7 @@ class FastSelector(RegularisationSelector):
         self._method = value
 
     def determine(self, solver: Algebraic, method: str | None = None) -> tuple[float, dict[str, float | str]]:
-        """Finds regularisation parameter using linear estimate based on values of decomposition diagonal.
+        """Find regularisation parameter using linear estimate based on values of decomposition diagonal.
 
         Parameters
         ----------

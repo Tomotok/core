@@ -18,7 +18,7 @@ class Tikhonov(RegularisedInversion):
         super()._cache_inputs(data, gmat, regularisation)
 
     def invert(self, alpha: float) -> np.ndarray:
-        r"""Inverts the regularised problem using provided regularisation parameter.
+        r"""Invert the regularised problem using provided regularisation parameter.
 
         Uses modified problem formulation and cached inputs to solve the following equation for :math:`\mathbf{g}`:
         

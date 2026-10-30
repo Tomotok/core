@@ -14,7 +14,7 @@ class Diagnostic:
 
     def load_data(self, shot: int, tvec: ArrayLike | None = None) -> Signals:
         """
-        Loads diagnostic data from a database. Specific implementation should be provided in subclass.
+        Load diagnostic data from a database. Specific implementation should be provided in subclass.
 
         Parameters
         ----------

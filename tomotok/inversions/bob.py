@@ -77,7 +77,7 @@ class Bob(Inversion):
         reg_factor: float = 0,
     ):
         """
-        Decomposes the geometry matrix using basis vectors.
+        Decompose the geometry matrix using basis vectors.
 
         Computes the adjoint basis, which is stored in the `adjoint_basis` attribute.
 
@@ -114,7 +114,7 @@ class Bob(Inversion):
         return
 
     def compute_coordinates(self, a: sparse.csc_array) -> sparse.csr_array:
-        """Computes coordinate matrix for transformation to reconstruction plane."""
+        """Compute coordinate matrix for transformation to reconstruction plane."""
         b = np.eye(a.shape[0])
         c = self.solver.solve(a, b)
         return sparse.csr_array(c)
@@ -164,7 +164,7 @@ class Bob(Inversion):
 
     def save_decomposition(self, floc: str | Path, description: str = '') -> None:
         """
-        Saves decomposition matrix and basis to hdf file. Norms are also included if calculated.
+        Save decomposition matrix and basis to hdf file. Norms are also included if calculated.
 
         Parameters
         ----------
@@ -188,7 +188,7 @@ class Bob(Inversion):
 
     def load_decomposition(self, floc: str | Path) -> None:
         """
-        Loads decomposed matrix and basis from an HDF file.
+        Load decomposed matrix and basis from an HDF file.
 
         Norms are loaded only if available in the file.
 
@@ -208,7 +208,7 @@ class Bob(Inversion):
 
     def normalise(self, precision: float = 1e-6) -> None:
         """
-        Computes normalisation factors for decomposition matrix.
+        Compute normalisation factors for decomposition matrix.
 
         Parameters
         ----------
@@ -224,7 +224,7 @@ class Bob(Inversion):
 
     def thresholding(self, image: np.ndarray, c: int, precision: float = 1e-6, conv: float = 1e-9) -> np.ndarray:
         """
-        Applies thresholding method to provided image.
+        Apply thresholding method to provided image.
 
         Parameters
         ----------
@@ -280,7 +280,7 @@ class Bob(Inversion):
 
     def invert(self, data: np.ndarray) -> np.ndarray:
         """
-        Uses decomposed matrix to project data into reconstruction plane and then transform to node basis.
+        Use decomposed matrix to project data into reconstruction plane and then transform to node basis.
 
         Parameters
         ----------

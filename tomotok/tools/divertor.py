@@ -18,7 +18,7 @@ def get_divertor_channels(
     method: str = 'any',
 ) -> NDArray[np.bool_]:
     """
-    Finds channels of geometry matrix that have contributions in the divertor area.
+    Find channels of geometry matrix that have contributions in the divertor area.
     
     Uses dot product of geometry matrix with divertor area mask matrix obtained from :func:`divertor_area_mask`.
 
@@ -65,7 +65,7 @@ def divertor_weighted_matrix(
     method: str = 'any',
 ) -> np.ndarray:
     """
-    Computes weight matrix. Supports different weight for pixels located in divertor area or those that are
+    Compute weight matrix. Supports different weight for pixels located in divertor area or those that are
     outside vacuum vessel.
 
     This matrix is useful for regularization of inverse problem, where the emission from divertor area is expected to

@@ -20,7 +20,7 @@ def regular_elliptical_flux(
     grid: RegularGrid, span: float | tuple[float, float] = 1.5
 ) -> np.ndarray:
     """
-    Creates a matrix of artificial flux surfaces with elliptical shape based on provided grid.
+    Create a matrix of artificial flux surfaces with elliptical shape based on provided grid.
 
     Parameters
     ----------
@@ -46,7 +46,7 @@ def elliptical_flux(
     radial_num: int, vertical_num: int, span: float | tuple[float, float] = 1.5
 ) -> np.ndarray:
     """
-    Creates a matrix of artificial flux surfaces with elliptical shape.
+    Create a matrix of artificial flux surfaces with elliptical shape.
 
     Minimum values at the border are determined by the span parameter.
 
@@ -83,7 +83,7 @@ def gaussian_on_flux(
     limit: float = 1, limit_width: float = 0.2, limit_power: int = 2
 ) -> np.ndarray:
     r"""
-    Creates gaussian artificial emissivity profile by transforming provided flux values.
+    Create gaussian artificial emissivity profile by transforming provided flux values.
 
     .. math::
         \varepsilon(\psi) = a \, \mathrm{e}^{-(\psi - c)^2 / w} \,,
@@ -136,7 +136,7 @@ def polar_phase_matrix(
     center: tuple[float, float] | None = None
 ) -> np.ndarray:
     """
-    Creates a matrix with sine phase in poloidal direction relative to provided center.
+    Create a matrix with sine phase in poloidal direction relative to provided center.
 
     The intended use is to modify an emissivity pattern by multiplying it with the returned matrix.
     This could be used to create island-like radiating structures in the phantom.
@@ -171,7 +171,7 @@ def polar_phase_matrix(
 
 def iso_psi(nx: int, ny: int, span: float = 1.5) -> np.ndarray:
     """
-    Creates matrix of artificial isotropic psi profile with border values for
+    Create matrix of artificial isotropic psi profile with border values for
     each axis equal to span.
 
     .. deprecated:: 2.0
@@ -208,7 +208,7 @@ def gauss(
     x: np.ndarray, w: float = 0.1, lim: float = 1, amp: float = 1, cen: float = 0.0,
 ) -> np.ndarray:
     r"""
-    Creates anisotropic gaussian artificial emissivity by 1D transform of x
+    Create anisotropic gaussian artificial emissivity by 1D transform of x
 
     .. math::
         f = amp \left( \mathrm{e}^{-(x-cen)^2 / w } - \mathrm{e}^{-(lim-cen)^2 / w} \right)
@@ -256,7 +256,7 @@ def gauss_iso(
     span: float = 1.2, w: float = 0.1, lim: float = 1, amp: float = 1, cen: float = 0.0,
 ) -> np.ndarray:
     """
-    Creates isotropic gaussian distribution.
+    Create isotropic gaussian distribution.
     See references for iso_psi and gauss
 
     .. deprecated:: 2.0
@@ -274,7 +274,7 @@ def gauss_iso(
 
 def polar_phase(x: np.ndarray, num: int = 3, shift: float = 0) -> np.ndarray:
     """
-    Applies sine phase in radial angle direction to given profile x.
+    Apply sine phase in radial angle direction to given profile x.
 
     Assumes equal dimension of grid elements in both axes. 
 
@@ -324,7 +324,7 @@ def islands(
     shift: float = 0.0,
 ) -> np.ndarray:
     """
-    Creates island like phantom from given psi profile. See references for gauss and polar_phase.
+    Create island like phantom from given psi profile. See references for gauss and polar_phase.
 
     .. deprecated:: 2.0
         Use :func:`gaussian_on_flux` and :func:`polar_phase_matrix` instead

@@ -15,7 +15,7 @@ from .grids import RegularGrid
 
 def save_sparse_gmat(floc: str | Path, gmat: sparse.sparray, grid: RegularGrid, attrs_dct: dict=None) -> None:
     """
-    Saves geometry matrix together with description of the grid.
+    Save geometry matrix together with description of the grid.
 
     Currently supports only regular rectangular grids.
 
@@ -55,7 +55,7 @@ def save_sparse_gmat(floc: str | Path, gmat: sparse.sparray, grid: RegularGrid, 
 
 def load_sparse_gmat(floc: str | Path) -> tuple[sparse.sparray, RegularGrid]:
     """
-    Loads hdf file and creates geometry matrix in sparse array format and RegularGrid class
+    Load hdf file and creates geometry matrix in sparse array format and RegularGrid class
 
     Parameters
     ----------
@@ -99,7 +99,7 @@ def load_sparse_gmat(floc: str | Path) -> tuple[sparse.sparray, RegularGrid]:
 
 def save_dense_gmat(floc: str | Path, gmat: np.ndarray, grid: RegularGrid, attrs_dct: dict = None) -> None:
     """
-    Saves geometry matrix together with description of the grid.
+    Save geometry matrix together with description of the grid.
 
     Currently supports only dense matrices and regular rectangular grids.
 
@@ -139,7 +139,7 @@ def save_dense_gmat(floc: str | Path, gmat: np.ndarray, grid: RegularGrid, attrs
 
 def load_dense_gmat(floc: str | Path) -> tuple[np.ndarray, RegularGrid]:
     """
-    Loads hdf file and creates dense geometry matrix and RegularGrid class
+    Load hdf file and creates dense geometry matrix and RegularGrid class
 
     Parameters
     ----------

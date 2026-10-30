@@ -16,7 +16,7 @@ from scipy import sparse
 
 def sparse_to_hdf(matrix: sparse.csc_array | sparse.csr_array | sparse.dia_array, group: h5py.Group):
     """
-    Saves sparse array of format csc, csr or dia into hdf file group.
+    Save sparse array of format csc, csr or dia into hdf file group.
 
     Parameters
     ----------
@@ -40,7 +40,7 @@ def sparse_to_hdf(matrix: sparse.csc_array | sparse.csr_array | sparse.dia_array
 
 def hdf_to_sparse(group: h5py.Group) -> sparse.sparray:
     """
-    Loads sparse array of format csc, csr or dia from hdf file group.
+    Load sparse array of format csc, csr or dia from hdf file group.
 
     Parameters
     ----------
@@ -69,7 +69,7 @@ def hdf_to_sparse(group: h5py.Group) -> sparse.sparray:
 
 def dia_to_hdf(matrix: sparse.dia_array, group: h5py.Group):
     """
-    Saves sparse diagonal array to hdf group.
+    Save sparse diagonal array to hdf group.
 
     Parameters
     ----------
@@ -88,7 +88,7 @@ def dia_to_hdf(matrix: sparse.dia_array, group: h5py.Group):
 
 def hdf_to_dia(group: h5py.Group) -> sparse.dia_array:
     """
-    Loads sparse diagonal array from hdf group.
+    Load sparse diagonal array from hdf group.
 
     Parameters
     ----------
@@ -112,7 +112,7 @@ def hdf_to_dia(group: h5py.Group) -> sparse.dia_array:
 
 def cs_to_hdf(matrix: sparse.csc_array | sparse.csr_array, group: h5py.Group):
     """
-    Saves compressed sparse array to hdf group.
+    Save compressed sparse array to hdf group.
 
     Parameters
     ----------
@@ -132,7 +132,7 @@ def cs_to_hdf(matrix: sparse.csc_array | sparse.csr_array, group: h5py.Group):
 
 def hdf_to_cs(group: h5py.Group) -> sparse.csc_array | sparse.csr_array:
     """
-    Loads compressed sparse array from hdf group.
+    Load compressed sparse array from hdf group.
 
     Parameters
     ----------

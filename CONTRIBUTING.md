@@ -75,6 +75,7 @@ https://numpydoc.readthedocs.io/en/latest/format.html
 Project conventions compatible with NumPy style:
 - For multiline docstrings, place the opening triple quotes on their own line and start the summary on the next line
 - Keep the summary short and end it with a period
+- Start the summary of functions and methods with a verb in the imperative mood, e.g. "Compute geometry matrix", not "Computes geometry matrix"
 - Leave one blank line between summary and the next section
 - Include standard sections as relevant: `Parameters`, `Returns`, `Raises`, `Notes`, `Examples`
 

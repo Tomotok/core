@@ -113,7 +113,7 @@ class AnisotropicDerivativeChecker:
 
     def update(self, x, y):
         """
-        Updates plots for current pixel coordinate
+        Update plots for current pixel coordinate
         """
         r_idx = np.abs(self.grid.r_center - x).argmin()
         z_idx = np.abs(self.grid.z_center - y).argmin()
@@ -142,7 +142,7 @@ class AnisotropicDerivativeChecker:
 
     def onclick(self, event):
         """
-        Gets coordinate from the click on the main flux plot
+        Get coordinate from the click on the main flux plot
         """
         x = event.xdata
         y = event.ydata

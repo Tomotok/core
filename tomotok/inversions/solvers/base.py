@@ -12,7 +12,7 @@ class Solver:
 
     def solve(self, a: ArrayLike | sparray, b: ArrayLike | sparray) -> ndarray:
         r"""
-        Solves the linear system :math:`\mathbf{Ax}=\mathbf{b}`.
+        Solve the linear system :math:`\mathbf{Ax}=\mathbf{b}`.
 
         Parameters
         ----------
